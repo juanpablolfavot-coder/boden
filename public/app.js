@@ -99,7 +99,7 @@ function navItems() {
     ['misrep', 'Mis reportes', IC.list],
   ];
   const items = [
-    ['cola', 'Triage', IC.list],
+    ['cola', 'Alertas', IC.list],
     ['mistareas', 'Mis tareas', IC.tasks],
     ['reportar', 'Reportar', IC.plus],
     ['panel', 'Panel', IC.chart],
@@ -259,7 +259,7 @@ async function renderTriage(c) {
   const hero = await heroHTML();
   c.innerHTML = `${hero}
     <div class="content">
-      <div class="sectionhead">${hexBadge()}<div><h1>Triage</h1><div class="sub">${alertas.length} ${alertas.length === 1 ? 'alerta activa' : 'alertas activas'} · ordenadas por prioridad</div></div></div>
+      <div class="sectionhead">${hexBadge()}<div><h1>Alertas</h1><div class="sub">${alertas.length} ${alertas.length === 1 ? 'alerta activa' : 'alertas activas'} · ordenadas por prioridad</div></div></div>
       <div class="pills">${FILTERS.map(([k, l, ic, cnt]) => `<button class="pill ${State.filter === k ? 'on' : ''}" data-f="${k}">${ic ? svg(ic) : ''}${l}${cnt ? `<span class="pc">${alertas.length}</span>` : ''}</button>`).join('')}</div>
       <div class="list">${alertas.length ? alertas.map(acardHTML).join('') : emptyHTML()}</div>
     </div>`;
@@ -467,14 +467,36 @@ async function adminCatalogos(body, tab) {
   const items = tab === 'ubicaciones' ? data.ubicaciones : data.categorias;
   const tipos = [['habitacion', 'Habitación'], ['area', 'Área común'], ['equipo', 'Equipo / instalación']];
   body.innerHTML = `<div class="admwrap">
-    <div class="admcard newform"><h4>${tab === 'ubicaciones' ? 'Nueva ubicación' : 'Nueva categoría'}</h4>
+    ${tab === 'ubicaciones' ? `<div class="admcard newform"><h4>Generar habitaciones por piso</h4>
+      <div class="adm-sub">Crea Habitación 101…, 201…, 301… (no duplica las que ya existan).</div>
+      <div class="timecols">
+        <div class="field"><label>Piso 1 (1xx)</label><input id="gp1" type="number" min="0" max="99" value="24"></div>
+        <div class="field"><label>Piso 2 (2xx)</label><input id="gp2" type="number" min="0" max="99" value="23"></div>
+        <div class="field"><label>Piso 3 (3xx)</label><input id="gp3" type="number" min="0" max="99" value="23"></div>
+      </div>
+      <div class="adm-sub" id="gtot" style="font-weight:700;color:var(--ink)">Total: 70 habitaciones</div>
+      <button class="btn btn-gold sm" id="gen-hab">Generar habitaciones</button></div>` : ''}
+    <div class="admcard newform"><h4>${tab === 'ubicaciones' ? 'Nueva ubicación suelta' : 'Nueva categoría'}</h4>
       ${tab === 'ubicaciones' ? `<div class="field"><select id="nc-tipo">${tipos.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>` : ''}
-      <div class="field"><input id="nc-nom" placeholder="${tab === 'ubicaciones' ? 'Ej: Habitación 305' : 'Ej: Pintura'}"></div>
+      <div class="field"><input id="nc-nom" placeholder="${tab === 'ubicaciones' ? 'Ej: Lobby, Pileta, Cocina' : 'Ej: Pintura'}"></div>
       <button class="btn btn-gold sm" id="nc-add">Agregar</button></div>
     ${items.map((it) => `<div class="admcard ${it.activo ? '' : 'off'}" data-id="${it.id}">
       <div class="adm-line"><input class="adm-nom" value="${esc(it.nombre)}"><button class="btn btn-ghost sm" data-act="save">Guardar</button><button class="btn btn-ghost sm" data-act="toggle">${it.activo ? 'Ocultar' : 'Activar'}</button></div>
       ${tab === 'ubicaciones' ? `<div class="adm-sub">${esc(it.tipo)}${it.activo ? '' : ' · oculta'}</div>` : (it.activo ? '' : '<div class="adm-sub">oculta</div>')}
     </div>`).join('')}</div>`;
+  // generador de habitaciones
+  if (tab === 'ubicaciones') {
+    const upd = () => { const t = (+document.getElementById('gp1').value || 0) + (+document.getElementById('gp2').value || 0) + (+document.getElementById('gp3').value || 0); document.getElementById('gtot').textContent = `Total: ${t} habitaciones`; };
+    ['gp1', 'gp2', 'gp3'].forEach((id) => document.getElementById(id).oninput = upd);
+    document.getElementById('gen-hab').onclick = async (e) => {
+      e.currentTarget.disabled = true;
+      try {
+        const r = await api('/catalogos/habitaciones-generar', { method: 'POST', body: JSON.stringify({ p1: +document.getElementById('gp1').value, p2: +document.getElementById('gp2').value, p3: +document.getElementById('gp3').value }) });
+        toast(`${r.creadas} creadas${r.existentes ? ` · ${r.existentes} ya existían` : ''}`);
+        State.catalogos = null; adminCatalogos(body, tab);
+      } catch (err) { toast(err.message, true); e.currentTarget.disabled = false; }
+    };
+  }
   const base = tab === 'ubicaciones' ? '/catalogos/ubicaciones' : '/catalogos/categorias';
   document.getElementById('nc-add').onclick = async (e) => { e.currentTarget.disabled = true; try { const payload = { nombre: document.getElementById('nc-nom').value }; if (tab === 'ubicaciones') payload.tipo = document.getElementById('nc-tipo').value; await api(base, { method: 'POST', body: JSON.stringify(payload) }); toast('Agregado'); State.catalogos = null; adminCatalogos(body, tab); } catch (err) { toast(err.message, true); e.currentTarget.disabled = false; } };
   body.querySelectorAll('[data-id]').forEach((row) => { const id = row.dataset.id; row.querySelectorAll('[data-act]').forEach((b) => b.onclick = async () => { try { if (b.dataset.act === 'save') { await api(base + '/' + id, { method: 'PATCH', body: JSON.stringify({ nombre: row.querySelector('.adm-nom').value }) }); toast('Guardado'); State.catalogos = null; } else { const off = row.classList.contains('off'); await api(base + '/' + id, { method: 'PATCH', body: JSON.stringify({ activo: off }) }); toast(off ? 'Activado' : 'Ocultado'); State.catalogos = null; adminCatalogos(body, tab); } } catch (err) { toast(err.message, true); } }); });

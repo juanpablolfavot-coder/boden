@@ -73,4 +73,23 @@ router.patch('/categorias/:id', auth, requireRole('admin'), async (req, res) => 
   res.json(rows[0]);
 });
 
+// POST /api/catalogos/habitaciones-generar  -> crea habitaciones por piso (101.., 201.., 301..)
+// body: { p1, p2, p3 }  cantidad de habitaciones por piso. No duplica las que ya existan.
+router.post('/habitaciones-generar', auth, requireRole('admin'), async (req, res) => {
+  const counts = [Number(req.body?.p1) || 0, Number(req.body?.p2) || 0, Number(req.body?.p3) || 0];
+  if (counts.every((n) => n <= 0)) return res.status(400).json({ error: 'Indicá cuántas habitaciones por piso' });
+  let creadas = 0, existentes = 0;
+  for (let piso = 1; piso <= 3; piso++) {
+    const cant = Math.min(counts[piso - 1], 99); // numeración piso*100 + 1..99
+    for (let i = 1; i <= cant; i++) {
+      const nombre = `Habitación ${piso * 100 + i}`;
+      const ex = await pool.query('SELECT 1 FROM ubicaciones WHERE nombre = $1 LIMIT 1', [nombre]);
+      if (ex.rowCount) { existentes++; continue; }
+      await pool.query('INSERT INTO ubicaciones (tipo, nombre) VALUES ($1,$2)', ['habitacion', nombre]);
+      creadas++;
+    }
+  }
+  res.json({ creadas, existentes, total: creadas + existentes });
+});
+
 module.exports = router;
