@@ -13,7 +13,8 @@ const State = {
 
 const PRIO = { urgente: '--urgente', alta: '--alta', media: '--media', baja: '--baja' };
 const PRIOL = { urgente: 'Urgente', alta: 'Alta', media: 'Media', baja: 'Baja' };
-const STL = { nueva: 'Nueva', asignada: 'Asignada', en_proceso: 'En proceso', resuelta: 'Resuelta', cerrada: 'Cerrada', cancelada: 'Cancelada' };
+const PRIO_EMOJI = { urgente: '🔴', alta: '🟠', media: '🟡', baja: '🟢' };
+const STL = { nueva: '🆕 Nueva', asignada: '📌 Asignada', en_proceso: '🔧 En proceso', resuelta: '✅ Resuelta', cerrada: '🔒 Cerrada', cancelada: '✖️ Cancelada' };
 const ROL_LABEL = { recepcion: 'Recepción', mucama: 'Mucama', personal: 'Personal', mantenimiento: 'Mantenimiento', jefe_mantenimiento: 'Jefe de mantenimiento', admin: 'Administrador' };
 
 const REPORTAN = ['recepcion', 'mucama', 'personal'];
@@ -55,7 +56,7 @@ function navItems() {
     ['misrep', 'Mis reportes', 'M4 6h16M4 12h16M4 18h10'],
   ];
   const items = [
-    ['cola', 'Cola', 'M4 6h16M4 12h16M4 18h16'],
+    ['cola', 'Triage', 'M4 6h16M4 12h16M4 18h16'],
     ['mistareas', 'Mis tareas', 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
     ['reportar', 'Reportar', 'M12 5v14M5 12h14'],
   ];
@@ -173,7 +174,7 @@ async function renderView() {
     else if (State.view === 'mistareas') { qs = '?mias=1'; title = 'Mis tareas'; sub = 'Asignadas a vos'; }
     else {
       const f = { abiertas: '?abiertas=1', urgentes: '?prioridad=urgente', nuevas: '?estado=nueva', todas: '' }[State.filter];
-      qs = f; title = 'Cola'; sub = 'Ordenadas por prioridad';
+      qs = f; title = '🚨 Triage'; sub = 'Ordenadas por prioridad';
     }
     const alertas = await api('/alertas' + qs);
     renderList(c, title, sub, alertas, State.view === 'cola');
@@ -193,7 +194,7 @@ function cardHTML(a) {
     <h3>${esc(a.titulo)}</h3>
     <div class="cmeta"><span class="loc">${esc(a.ubicacion || '—')}</span><span class="dot"></span><span>${esc(a.categoria || '—')}</span></div>
     <div class="cfoot">
-      <span class="statebadge" style="color:var(--${a.estado})"><i style="background:var(--${a.estado})"></i>${STL[a.estado]}</span>
+      <span class="statebadge" style="color:var(--${a.estado})">${STL[a.estado]}</span>
       <span class="cwho">${who} · ${rel(a.created_at)}</span>
     </div>
   </div>`;
@@ -232,7 +233,7 @@ async function renderReportar(c) {
       <textarea id="r-desc" placeholder="Contá lo que ves, si la habitación está ocupada, etc."></textarea></div>
     <div class="field"><label>¿Qué tan urgente es?</label>
       <div class="chips" id="r-chips">
-        ${['urgente', 'alta', 'media', 'baja'].map((p) => `<div class="chip ${p === 'media' ? 'sel' : ''}" data-p="${p}" style="${p === 'media' ? 'background:var(' + PRIO[p] + ');color:#fff' : ''}">${PRIOL[p]}</div>`).join('')}
+        ${['urgente', 'alta', 'media', 'baja'].map((p) => `<div class="chip ${p === 'media' ? 'sel' : ''}" data-p="${p}" style="${p === 'media' ? 'background:var(' + PRIO[p] + ');color:#fff' : ''}">${PRIO_EMOJI[p]} ${PRIOL[p]}</div>`).join('')}
       </div></div>
     <button class="btn btn-primary" id="r-send" style="margin-top:8px">Enviar alerta</button>
   </div>`;
