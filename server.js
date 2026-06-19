@@ -15,6 +15,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth',      require('./src/routes/auth'));
 app.use('/api/alertas',   require('./src/routes/alertas'));
 app.use('/api/catalogos', require('./src/routes/catalogos'));
+app.use('/api/usuarios',  require('./src/routes/usuarios'));
 app.use('/api/push',      require('./src/routes/push'));
 app.use('/api/reportes',  require('./src/routes/reportes'));
 

@@ -19,7 +19,16 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// --- ABM básico (solo admin) ---
+// --- ABM (solo admin) ---
+
+// Lista completa (incluye inactivos) para el panel admin
+router.get('/admin', auth, requireRole('admin'), async (req, res) => {
+  const [ubic, cat] = await Promise.all([
+    pool.query('SELECT id, tipo, nombre, activo FROM ubicaciones ORDER BY activo DESC, tipo, nombre'),
+    pool.query('SELECT id, nombre, activo FROM categorias ORDER BY activo DESC, nombre'),
+  ]);
+  res.json({ ubicaciones: ubic.rows, categorias: cat.rows });
+});
 
 router.post('/ubicaciones', auth, requireRole('admin'), async (req, res) => {
   const { tipo, nombre } = req.body || {};
@@ -31,6 +40,18 @@ router.post('/ubicaciones', auth, requireRole('admin'), async (req, res) => {
   res.status(201).json(rows[0]);
 });
 
+router.patch('/ubicaciones/:id', auth, requireRole('admin'), async (req, res) => {
+  const { nombre, tipo, activo } = req.body || {};
+  const sets = [], params = [];
+  if (nombre !== undefined) { params.push(nombre.trim()); sets.push(`nombre=$${params.length}`); }
+  if (tipo !== undefined)   { params.push(tipo); sets.push(`tipo=$${params.length}`); }
+  if (activo !== undefined) { params.push(!!activo); sets.push(`activo=$${params.length}`); }
+  if (!sets.length) return res.status(400).json({ error: 'Nada para actualizar' });
+  params.push(req.params.id);
+  const { rows } = await pool.query(`UPDATE ubicaciones SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`, params);
+  res.json(rows[0]);
+});
+
 router.post('/categorias', auth, requireRole('admin'), async (req, res) => {
   const { nombre } = req.body || {};
   if (!nombre) return res.status(400).json({ error: 'Falta el nombre' });
@@ -39,6 +60,17 @@ router.post('/categorias', auth, requireRole('admin'), async (req, res) => {
     [nombre.trim()]
   );
   res.status(201).json(rows[0]);
+});
+
+router.patch('/categorias/:id', auth, requireRole('admin'), async (req, res) => {
+  const { nombre, activo } = req.body || {};
+  const sets = [], params = [];
+  if (nombre !== undefined) { params.push(nombre.trim()); sets.push(`nombre=$${params.length}`); }
+  if (activo !== undefined) { params.push(!!activo); sets.push(`activo=$${params.length}`); }
+  if (!sets.length) return res.status(400).json({ error: 'Nada para actualizar' });
+  params.push(req.params.id);
+  const { rows } = await pool.query(`UPDATE categorias SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`, params);
+  res.json(rows[0]);
 });
 
 module.exports = router;
