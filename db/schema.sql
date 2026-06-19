@@ -73,3 +73,20 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 CREATE INDEX IF NOT EXISTS idx_alertas_estado    ON alertas(estado);
 CREATE INDEX IF NOT EXISTS idx_alertas_asignado  ON alertas(asignado_a);
 CREATE INDEX IF NOT EXISTS idx_hist_alerta       ON alerta_historial(alerta_id);
+
+-- VIP en alertas
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS vip BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Turnos (1 a 3 personas por turno)
+CREATE TABLE IF NOT EXISTS turnos (
+  id          SERIAL PRIMARY KEY,
+  nombre      TEXT NOT NULL,
+  hora_inicio TEXT NOT NULL,  -- 'HH:MM'
+  hora_fin    TEXT NOT NULL,  -- 'HH:MM'
+  activo      BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE TABLE IF NOT EXISTS turno_usuarios (
+  turno_id   INTEGER NOT NULL REFERENCES turnos(id) ON DELETE CASCADE,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  PRIMARY KEY (turno_id, usuario_id)
+);

@@ -46,6 +46,7 @@ router.get('/', auth, async (req, res) => {
     if (asignado)  { params.push(asignado);   where.push(`a.asignado_a = $${params.length}`); }
     if (mias === '1')     { params.push(req.user.id); where.push(`a.asignado_a = $${params.length}`); }
     if (abiertas === '1') { where.push(`a.estado NOT IN ('cerrada','cancelada')`); }
+    if (req.query.vip === '1') { where.push(`a.vip = TRUE`); }
 
     // Los que solo reportan ven únicamente lo suyo.
     if (['recepcion', 'mucama', 'personal'].includes(req.user.rol)) {
@@ -67,7 +68,7 @@ router.get('/', auth, async (req, res) => {
 
 // POST /api/alertas  (reportar)
 router.post('/', auth, async (req, res) => {
-  const { titulo, descripcion, categoria_id, ubicacion_id, prioridad } = req.body || {};
+  const { titulo, descripcion, categoria_id, ubicacion_id, prioridad, foto, vip } = req.body || {};
   if (!titulo || !ubicacion_id) {
     return res.status(400).json({ error: 'Faltan título y ubicación' });
   }
@@ -75,12 +76,15 @@ router.post('/', auth, async (req, res) => {
   try {
     const num = (await pool.query("SELECT nextval('alerta_numero_seq') AS n")).rows[0].n;
     const { rows } = await pool.query(
-      `INSERT INTO alertas (numero, titulo, descripcion, categoria_id, ubicacion_id, prioridad, reportado_por)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [num, titulo.trim(), descripcion || null, categoria_id || null, ubicacion_id, prio, req.user.id]
+      `INSERT INTO alertas (numero, titulo, descripcion, categoria_id, ubicacion_id, prioridad, reportado_por, vip)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [num, titulo.trim(), descripcion || null, categoria_id || null, ubicacion_id, prio, req.user.id, !!vip]
     );
     const id = rows[0].id;
     await registrarHistorial(id, 'Alerta creada', req.user.id, `Prioridad ${prio}`);
+    if (foto && typeof foto === 'string' && foto.startsWith('data:image')) {
+      await pool.query('INSERT INTO adjuntos (alerta_id, url, tipo) VALUES ($1,$2,$3)', [id, foto, 'problema']);
+    }
     const alerta = await getAlerta(id);
 
     // Push a mantenimiento + jefe
@@ -102,6 +106,11 @@ router.post('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'Alerta no encontrada' });
+  const adj = await pool.query(
+    'SELECT url, tipo, created_at FROM adjuntos WHERE alerta_id = $1 ORDER BY created_at',
+    [req.params.id]
+  );
+  alerta.adjuntos = adj.rows;
   res.json(alerta);
 });
 
@@ -154,12 +163,13 @@ router.patch('/:id/asignar', auth, requireRole('jefe_mantenimiento', 'admin'), a
 
 // PATCH /api/alertas/:id/estado  (en_proceso | resuelta | cerrada | cancelada | reabrir)
 router.patch('/:id/estado', auth, requireRole('mantenimiento', 'jefe_mantenimiento', 'admin'), async (req, res) => {
-  const { estado, nota } = req.body || {};
+  const { estado, nota, foto } = req.body || {};
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'No encontrada' });
 
   const transiciones = {
     en_proceso: { from: ['asignada', 'nueva'], set: `estado='en_proceso'`, ev: 'En proceso' },
+    pausar:     { from: ['en_proceso'], set: `estado='asignada'`, ev: 'Pausada' },
     resuelta:   { from: ['en_proceso', 'asignada'], set: `estado='resuelta', resuelta_at=now()`, ev: 'Resuelta' },
     cerrada:    { from: ['resuelta'], set: `estado='cerrada', cerrada_at=now()`, ev: 'Cerrada y verificada', jefe: true },
     cancelada:  { from: ['nueva', 'asignada', 'en_proceso', 'resuelta'], set: `estado='cancelada'`, ev: 'Cancelada' },
@@ -176,6 +186,9 @@ router.patch('/:id/estado', auth, requireRole('mantenimiento', 'jefe_mantenimien
 
   await pool.query(`UPDATE alertas SET ${t.set} WHERE id = $1`, [alerta.id]);
   await registrarHistorial(alerta.id, t.ev, req.user.id, nota || null);
+  if (estado === 'resuelta' && foto && typeof foto === 'string' && foto.startsWith('data:image')) {
+    await pool.query('INSERT INTO adjuntos (alerta_id, url, tipo) VALUES ($1,$2,$3)', [alerta.id, foto, 'solucion']);
+  }
   res.json(await getAlerta(alerta.id));
 });
 

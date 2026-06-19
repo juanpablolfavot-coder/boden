@@ -20,6 +20,28 @@ async function ensureSchema() {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8');
   await pool.query(sql);
   await seedIfEmpty();
+  await seedTurnosIfEmpty();
+}
+
+// Carga turnos de ejemplo si la tabla está vacía (independiente del seed de usuarios)
+async function seedTurnosIfEmpty() {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM turnos');
+  if (rows[0].n > 0) return;
+  const oper = await pool.query("SELECT id, email FROM usuarios WHERE rol IN ('mantenimiento','jefe_mantenimiento')");
+  const byEmail = {};
+  oper.rows.forEach((u) => { byEmail[u.email] = u.id; });
+  const turnos = [
+    ['Mañana', '06:00', '14:00', ['diego@boden']],
+    ['Tarde', '14:00', '22:00', ['martin@boden']],
+    ['Noche', '22:00', '06:00', ['martin@boden', 'diego@boden']],
+  ];
+  for (const [nombre, ini, fin, emails] of turnos) {
+    const t = await pool.query('INSERT INTO turnos (nombre, hora_inicio, hora_fin) VALUES ($1,$2,$3) RETURNING id', [nombre, ini, fin]);
+    for (const em of emails) {
+      if (byEmail[em]) await pool.query('INSERT INTO turno_usuarios (turno_id, usuario_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [t.rows[0].id, byEmail[em]]);
+    }
+  }
+  console.log('[BODEN] Turnos de ejemplo cargados.');
 }
 
 async function seedIfEmpty() {
