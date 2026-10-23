@@ -224,7 +224,7 @@ OS.actions.alertDetail=async(id)=>{
  (isMaint()&&['en_proceso','asignada'].includes(a.estado)?'<button class="btn btn-primary" data-action="alertResolve" data-id="'+id+'">Marcar resuelta</button>':'')+
  (isManager()&&a.estado==='resuelta'?'<button class="btn btn-primary" data-action="alertClose" data-id="'+id+'">Cerrar y verificar</button>':'')+
  (isMaint()&&['resuelta','cerrada'].includes(a.estado)?'<button class="btn btn-soft" data-action="alertReopen" data-id="'+id+'">Reabrir</button>':'')+
- '<button class="btn btn-soft" data-action="newWorkForAlert" data-id="'+id+'">Registrar intervención</button></div>';
+ (isMaint()?'<button class="btn btn-soft" data-action="newWorkForAlert" data-id="'+id+'">Registrar intervención</button>':'')+'</div>';
  modal(a.codigo+' · '+a.titulo,detailsHtml,null);
 };
 const alterAlert=(name,state)=>OS.actions[name]=async(id)=>{
