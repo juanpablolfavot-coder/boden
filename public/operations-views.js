@@ -16,14 +16,14 @@ const muted=(text)=>'<span class="cell-sub">'+E(text||'—')+'</span>';
 const summary=(kpi,title,value,description,ico,cls='')=>'<div class="metric"><div class="metric-head"><span>'+E(title)+'</span><span class="metric-icon '+cls+'">'+I(ico)+'</span></div><strong>'+number(value)+'</strong><small>'+E(description)+'</small></div>';
 const upcoming=(records,kind)=>records?.length?records.map(x=>'<div class="alert-line"><div class="iconbox">'+I(kind==='p'?'calendar':'box')+'</div><div><strong>'+E(kind==='p'?x.titulo:x.nombre)+'</strong><small>'+E(kind==='p'?x.equipo:x.unidad)+'</small></div><div class="right">'+E(kind==='p'?fdate(x.proxima_fecha):number(x.cantidad)+' / '+number(x.minimo))+'</div></div>').join(''):empty(kind==='p'?'Agenda al día':'Sin mínimos comprometidos',kind==='p'?'No hay mantenimientos pendientes en los próximos 14 días.':'No hay repuestos por debajo del mínimo.',kind==='p'?'calendar':'check');
 function renderHome(d){
- const total=Number(d.equipos?.total||0),off=Number(d.equipos?.fuera||0),health=total?Math.max(0,Math.round((total-off)/total*100)):100;
+ const total=Number(d.equipos?.total||0),off=Number(d.equipos?.fuera||0),maintenance=Number(d.equipos?.reparacion||0),online=Math.max(0,total-off-maintenance),health=total?Math.round(online/total*100):null;
  const recent=d.ultimos_trabajos||[];
  const chart=d.tendencia||[];
  const today=new Date();
  const days=Array.from({length:7},(_,i)=>{const n=new Date(today);n.setDate(n.getDate()-(6-i));const key=n.toLocaleDateString('sv-SE',{timeZone:'America/Argentina/Cordoba'});return {label:n.toLocaleDateString('es-AR',{weekday:'short'}).replace('.',''),value:Number(chart.find(x=>dateField(x.dia)===key)?.cantidad||0)}});
  const max=Math.max(1,...days.map(x=>x.value));
- el().innerHTML=pageHead('Panel general','Estado diario de instalaciones, personal técnico y tareas programadas.',btn('+ Registrar trabajo','newWork','','btn-primary'))+
- '<div class="hero"><div><div class="overline">BÖDEN · ESTADO OPERATIVO</div><h2>Mantenimiento general del hotel</h2><p>Inventario técnico, intervenciones y mantenimiento preventivo, centralizados.</p></div><div class="hero-mini"><div class="hero-measure"><span>Equipos activos</span><strong>'+number(Math.max(0,total-off))+'</strong></div><div class="hero-measure"><span>Disponibilidad</span><strong>'+health+'%</strong></div></div></div>'+
+ el().innerHTML=pageHead('Operación diaria','Instalaciones, equipos y equipo técnico. Todo en un mismo lugar.',btn('+ Registrar trabajo','newWork','','btn-primary'))+
+ '<div class="hero"><div><div class="overline">BÖDEN HOTEL & SPA · AKEN SOUL</div><h2>Cuidamos cada detalle.</h2><p>Una operación de mantenimiento a la altura de la experiencia Böden.</p></div><div class="hero-mini"><div class="hero-measure"><span>Equipos en servicio</span><strong>'+number(online)+'</strong></div><div class="hero-measure"><span>Disponibilidad registrada</span><strong>'+(health===null?'—':health+'%')+'</strong></div></div></div>'+
  '<div class="metric-grid">'+summary('equipos','Equipos registrados',total,off+' fuera de servicio','building')+
  summary('preventivos','Preventivos vencidos',d.preventivos?.vencidos||0,(d.preventivos?.semana||0)+' próximos en 7 días','calendar','warn')+
  summary('stock','Stock bajo mínimo',d.stock?.bajos||0,'Repuestos que requieren atención','box','red')+

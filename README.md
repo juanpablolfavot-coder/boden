@@ -113,6 +113,45 @@ Abrí http://localhost:3000
 ---
 
 
+
+## Identidad visual BÖDEN · AKEN SOUL (octubre 2026)
+
+La plataforma interna adopta el lenguaje visual del sitio oficial
+[bodenhotel.com](https://bodenhotel.com/es/about/) y de la marca AKEN SOUL,
+sin replicar la web pública ni incorporar módulos de reservas.
+
+**Componentes y criterios**
+- Carbón cálido `#302F2E` y negro `#211E1B` para navegación y superficies oscuras.
+- Arena `#D0BDAB`, champagne `#B79A80`, crema `#EEE8DF` y blanco
+  cálido `#F8F5F0`; uso contenido de rojo/verde reservado a estados reales.
+- Fuente `Jost` con pesos livianos para la identidad, navegación, titulares
+  y formularios; `Inter` para números de métricas y datos operativos.
+- Wordmark tipográfico BÖDEN / AKEN SOUL; reemplazar por SVG oficial
+  suministrado por el hotel cuando esté disponible.
+- Fotografía auténtica de la propiedad publicada por AKEN Hotels:
+  habitación en la pantalla de acceso; sector spa/piscina en el panel.
+  Actualmente referenciada mediante URLs del sitio oficial AKEN; en producción
+  conviene obtener autorización y alojar copias optimizadas bajo control del
+  hotel, porque los enlaces externos pueden cambiar o bloquearse.
+- Estética editorial: navegación silenciosa, espacios consistentes,
+  bordes discretos, iconografía simple y contrastes suficientemente legibles.
+- **Una única aplicación** para alertas, trabajos, equipos, mantenimiento
+  preventivo, repuestos, herramientas, personal, turnos y sectores.
+- Imágenes decorativas solo en login y cabecera; los formularios, las tablas
+  y las acciones técnicas priorizan legibilidad, rapidez y accesibilidad.
+- `public/boden-brand.css` contiene los tokens y las adaptaciones de identidad.
+  El resto del CSS y las API conservan el comportamiento y los permisos
+  existentes. Hay degradación visual a fondo carbón si una imagen no carga.
+
+**Criterios para revisar la experiencia:**
+1. Login en computadora y móvil sin desplazamientos innecesarios.
+2. Registro de incidencias, trabajos y repuestos en pocos pasos.
+3. Lectura de prioridad, sector, estado y acciones sin depender solo del color.
+4. Disponibilidad del inventario: sin mostrar 100% cuando aún no hay activos
+   registrados.
+5. Fotos no deben utilizarse para encubrir o dificultar avisos urgentes.
+
+
 ## MaintenanceOS v2 · gestión integral del hotel (octubre 2026)
 
 La portada `/` concentra todos los módulos operativos y administrativos en una
