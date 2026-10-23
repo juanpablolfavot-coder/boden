@@ -112,6 +112,62 @@ Abrí http://localhost:3000
 
 ---
 
+
+## MaintenanceOS v2 · gestión integral del hotel (octubre 2026)
+
+La portada `/` ahora utiliza una interfaz nueva, responsive y pensada para el
+personal técnico y jefatura. El sistema anterior se conserva en `/legacy.html`
+para administrar usuarios, turnos, ubicaciones y los flujos clásicos de alertas.
+
+### Módulos disponibles
+
+- **Centro de control**: disponibilidad de activos, vencimientos, consumo
+  de stock, trabajos recientes, productividad y alertas.
+- **Equipos e instalaciones**: código único, familia, sector/ubicación, serie,
+  marca/modelo, garantía, criticidad, estado e historial de intervenciones.
+  Catálogo de familias técnicas para hoteles: HVAC, bombas, calderas, grupos
+  electrógenos, ascensores, contra incendios, piscina, spa, lavandería, cocina,
+  habitaciones, infraestructura y más. No se cargan activos ficticios.
+- **Mantenimiento preventivo**: frecuencia y próxima fecha por equipo,
+  instrucciones de servicio, responsable y cumplimiento desde el celular.
+  Completar un preventivo genera automáticamente un parte firmado por usuario
+  y reprograma el siguiente servicio.
+- **Partes de trabajo**: registro diario manual por técnico, con tiempo, equipo,
+  alerta asociada, descripción, tipo, estado y resultado; la autoría se toma
+  del token, no se puede suplantar desde el formulario.
+- **Almacén de repuestos**: SKU, mínimos, ubicación, proveedor y cantidad.
+  Ingresos/consumos/ajustes en kardex auditable; se rechazan saldos negativos,
+  incluso ante concurrencia.
+- **Herramientas**: ficha, condición, ubicación, estado, préstamo nominativo,
+  devolución y trazabilidad. Los cambios de custodia son transaccionales.
+- **Alertas**: se mantienen la gestión anterior, las prioridades y los permisos.
+
+### Permisos
+
+Recepción/mucamas pueden reportar alertas. Técnicos ven activos, planificaciones,
+almacén y registran su propio trabajo; pueden consumir stock y pedir/prestar a sí
+mismos herramientas. Jefatura/administración administra catálogos técnicos,
+repuestos, planes y préstamos a otros empleados. La administración de usuarios
+permanece en la aplicación clásica.
+
+### Despliegue
+
+Render `boden` utiliza Node y PostgreSQL `boden-db` con las variables
+`DATABASE_URL`, `JWT_SECRET` y `BODEN_ADMIN_PASSWORD` (requerida solo
+cuando la base de usuarios está vacía). Las migraciones nuevas están en
+`db/operations.sql` y son aditivas; no se eliminan tablas existentes.
+No almacenar secretos en GitHub. Se requiere respaldo de PostgreSQL antes de
+cambios importantes en producción.
+
+### Próximas mejoras recomendadas
+
+Integración de lectores de medidores (horómetros, temperatura, presión),
+checklists normativos específicos del establecimiento, adjuntos fotográficos
+de OT, informes PDF, aprobación de compras y notificaciones push VAPID.
+Las reglas y frecuencias regulatorias dependen de la jurisdicción y del equipo;
+no se presuponen sin relevamiento técnico.
+
+
 ## Estructura del proyecto
 
 ```
