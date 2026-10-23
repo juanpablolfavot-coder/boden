@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "gen-vapid": "node scripts/gen-vapid.js"
+    "gen-vapid": "node scripts/gen-vapid.js",
+    "check": "node --check server.js && node --check src/db.js && node --check src/routes/equipos.js && node --check src/routes/preventivos.js && node --check src/routes/trabajos.js && node --check src/routes/stock.js && node --check src/routes/herramientas.js && node --check src/routes/centro.js && node --check public/operations.js && node --check public/operations-views.js && node --check public/operations-forms.js",
+    "test": "npm run check"
   },
   "engines": {
     "node": ">=18"

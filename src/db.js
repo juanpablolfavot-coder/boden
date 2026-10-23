@@ -19,6 +19,9 @@ async function query(text, params) {
 async function ensureSchema() {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8');
   await pool.query(sql);
+  // Módulos CMMS v2: migraciones aditivas sin eliminar tablas ni registros.
+  const operationsSql = fs.readFileSync(path.join(__dirname, '..', 'db', 'operations.sql'), 'utf8');
+  await pool.query(operationsSql);
   await seedIfEmpty();
   await seedTurnosIfEmpty();
 }
