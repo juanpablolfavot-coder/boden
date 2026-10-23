@@ -60,24 +60,45 @@ function toast(msg,error=false){
 const isManager=()=>['admin','jefe_mantenimiento'].includes(S.user?.rol);
 const isMaint=()=>['admin','jefe_mantenimiento','mantenimiento'].includes(S.user?.rol);
 const items=[
- {id:'inicio',text:'Centro de control',icon:'grid'},
- {id:'alertas',text:'Alertas e incidencias',icon:'bell'},
- {id:'trabajos',text:'Partes de trabajo',icon:'clipboard'},
- {id:'equipos',text:'Equipos e instalaciones',icon:'building'},
- {id:'preventivos',text:'Plan preventivo',icon:'calendar'},
- {id:'stock',text:'Almacén de repuestos',icon:'box'},
- {id:'herramientas',text:'Herramientas',icon:'tool'}
+ {id:'inicio',text:'Panel general',icon:'grid',group:'main'},
+ {id:'alertas',text:'Avisos e incidencias',icon:'bell',group:'ops'},
+ {id:'trabajos',text:'Trabajos realizados',icon:'clipboard',group:'ops'},
+ {id:'preventivos',text:'Mantenimiento planificado',icon:'calendar',group:'ops'},
+ {id:'equipos',text:'Equipos e instalaciones',icon:'building',group:'assets'},
+ {id:'stock',text:'Repuestos y almacén',icon:'box',group:'assets'},
+ {id:'herramientas',text:'Herramientas',icon:'tool',group:'assets'},
+ {id:'personal',text:'Personal y permisos',icon:'users',group:'admin',admin:true},
+ {id:'turnos',text:'Turnos y guardias',icon:'clock',group:'admin',admin:true},
+ {id:'espacios',text:'Habitaciones y sectores',icon:'map',group:'admin',admin:true}
 ];
 const titles=Object.fromEntries(items.map(x=>[x.id,x.text]));
+const groups=[
+ {id:'main',label:'RESUMEN'},
+ {id:'ops',label:'TRABAJO DIARIO'},
+ {id:'assets',label:'RECURSOS DEL HOTEL'},
+ {id:'admin',label:'CONFIGURACIÓN'}
+];
+const isAdmin=()=>S.user?.rol==='admin';
 function shell(){
- const visible=items.filter(x=>isMaint()||x.id==='alertas');
- const html='<div class="layout" id="layout"><div class="mobile-dimmer" data-action="menu"></div><aside class="sidebar">'+
- '<div class="brand"><div class="brand-emblem">B</div><div><div class="brand-name">BÖDEN</div><div class="brand-sub">MaintenanceOS</div></div></div>'+
- '<div class="nav-section">OPERACIONES</div><nav class="nav" aria-label="Navegación principal">'+visible.map(x=>'<button type="button" class="nav-btn'+(S.page===x.id?' active':'')+'" data-nav="'+x.id+'">'+I(x.icon)+E(x.text)+'</button>').join('')+'</nav>'+
- '<div class="nav-divider"></div><div class="nav-section">ADMINISTRACIÓN</div><nav class="nav"><a class="nav-btn" href="/legacy.html">'+I('settings')+'Gestión clásica y usuarios</a></nav>'+
- '<div class="side-foot"><div class="site-pill"><span class="dot"></span> Conectado · Gestión hotelera</div><div class="user-chip"><div class="avatar">'+E((S.user.nombre||'U').charAt(0).toUpperCase())+'</div><div><strong>'+E(S.user.nombre)+'</strong><small>'+E(status(S.user.rol).replaceAll('_',' '))+'</small></div><button class="logout" data-action="logout" title="Cerrar sesión">'+I('logout')+'</button></div></div>'+
- '</aside><main class="main"><header class="topbar"><div class="mobile-top"><button class="menu-btn" data-action="menu" aria-label="Abrir menú">'+I('menu')+'</button></div><div class="crumb"><span class="hide-mobile">Hotel & Spa</span><span class="crumb-sep hide-mobile">/</span><strong id="crumb">'+E(titles[S.page]||'BÖDEN')+'</strong></div><div class="top-actions"><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span><span class="dot"></span><span>Operativo</span></div></header><div id="screen" class="content"></div></main></div>';
- document.getElementById('app').innerHTML=html;
+ const visible=items.filter(x=>x.admin?isAdmin():isMaint()||x.id==='alertas');
+ const sections=groups.map(g=>{
+   const entries=visible.filter(x=>x.group===g.id);
+   if(!entries.length)return '';
+   return '<div class="nav-section">'+E(g.label)+'</div><nav class="nav" aria-label="'+E(g.label)+'">'+entries.map(x=>
+     '<button type="button" class="nav-btn'+(S.page===x.id?' active':'')+'" data-nav="'+x.id+'">'+I(x.icon)+'<span>'+E(x.text)+'</span></button>'
+   ).join('')+'</nav>';
+ }).join('');
+ const header='<header class="topbar">'+
+  '<div class="header-start"><button class="menu-btn only-mobile" data-action="menu" aria-label="Abrir menú">'+I('menu')+'</button><div class="crumb"><span class="crumb-context">OPERACIONES DEL HOTEL</span><span class="crumb-sep">/</span><strong id="crumb">'+E(titles[S.page]||'BÖDEN')+'</strong></div></div>'+
+  '<div class="top-actions"><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span>'+
+  '<span class="head-status"><span class="dot"></span> Plataforma disponible</span></div></header>';
+ const brand='<div class="brand"><div class="brand-emblem">B</div><div><div class="brand-name">BÖDEN</div><div class="brand-sub">HOTEL & SPA · MANTENIMIENTO</div></div></div>';
+ const user='<div class="side-foot"><div class="site-pill"><span class="dot"></span><span>GESTIÓN INTERNA · BÖDEN</span></div>'+
+  '<div class="user-chip"><div class="avatar">'+E((S.user.nombre||'U').charAt(0).toUpperCase())+'</div><div><strong>'+E(S.user.nombre)+'</strong><small>'+E(S.user.rol.replaceAll('_',' '))+'</small></div>'+
+  '<button class="logout" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">'+I('logout')+'</button></div></div>';
+ document.getElementById('app').innerHTML='<div class="layout" id="layout"><div class="mobile-dimmer" data-action="menu"></div>'+
+ '<aside class="sidebar">'+brand+'<div class="sidebar-rule"></div>'+sections+user+'</aside><main class="main">'+header+
+ '<div id="screen" class="content"></div></main></div>';
 }
 function login(){
  document.getElementById('app').innerHTML='<div class="login-layout"><div class="login-visual"><div class="brand"><div class="brand-emblem">B</div><div><div class="brand-name">BÖDEN</div><div class="brand-sub">MaintenanceOS</div></div></div><div><div class="overline" style="color:#d3b277;margin-bottom:18px">HOTEL & SPA · FACILITIES</div><h1>El arte de mantener todo funcionando.</h1><p>Control de instalaciones, equipos, trabajos, repuestos y herramientas en una única plataforma.</p></div><footer>BÖDEN · EXCELENCIA OPERATIVA</footer></div><div class="login-side"><form id="login-form" class="login-form"><div class="overline">ACCESO AL SISTEMA</div><h2>Bienvenido de nuevo.</h2><p class="muted">Ingresá con tus credenciales de mantenimiento.</p><div class="field"><label>Correo o usuario</label><input type="text" name="email" autocomplete="username" placeholder="usuario@boden" required></div><div class="field"><label>Contraseña</label><input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required></div><button class="btn btn-primary" type="submit">Iniciar sesión '+I('arrow')+'</button><p id="login-error" class="login-error"></p></form></div></div>';
@@ -88,6 +109,7 @@ async function init(){
 }
 async function navigate(page){
  if(!isMaint()&&page!=='alertas')page='alertas';
+ if(!isAdmin()&&['personal','turnos','espacios'].includes(page))page='inicio';
  if(!titles[page])page=isMaint()?'inicio':'alertas';
  S.page=page;S.q='';S.filter='';S.menu=false;
  const layout=document.getElementById('layout');if(layout)layout.classList.remove('menu-open');

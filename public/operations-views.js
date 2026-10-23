@@ -22,8 +22,8 @@ function renderHome(d){
  const today=new Date();
  const days=Array.from({length:7},(_,i)=>{const n=new Date(today);n.setDate(n.getDate()-(6-i));const key=n.toLocaleDateString('sv-SE',{timeZone:'America/Argentina/Cordoba'});return {label:n.toLocaleDateString('es-AR',{weekday:'short'}).replace('.',''),value:Number(chart.find(x=>dateField(x.dia)===key)?.cantidad||0)}});
  const max=Math.max(1,...days.map(x=>x.value));
- el().innerHTML=pageHead('Centro de control','Una visión completa de la operación técnica del hotel.',btn('+ Registrar trabajo','newWork','','btn-primary'))+
- '<div class="hero"><div><div class="overline" style="color:#9fd2b8">PANORAMA GENERAL · MANTENIMIENTO</div><h2>Todo el hotel,<br>bajo control.</h2><p>Gestioná equipos, prevení fallas y documentá cada intervención desde un solo lugar.</p></div><div class="hero-right"><div class="hero-meter" style="--percent:'+health+'%"><div><strong>'+health+'%</strong><span>Disponibilidad</span></div></div></div></div>'+
+ el().innerHTML=pageHead('Panel general','Estado diario de instalaciones, personal técnico y tareas programadas.',btn('+ Registrar trabajo','newWork','','btn-primary'))+
+ '<div class="hero"><div><div class="overline">BÖDEN · ESTADO OPERATIVO</div><h2>Mantenimiento general del hotel</h2><p>Inventario técnico, intervenciones y mantenimiento preventivo, centralizados.</p></div><div class="hero-mini"><div class="hero-measure"><span>Equipos activos</span><strong>'+number(Math.max(0,total-off))+'</strong></div><div class="hero-measure"><span>Disponibilidad</span><strong>'+health+'%</strong></div></div></div>'+
  '<div class="metric-grid">'+summary('equipos','Equipos registrados',total,off+' fuera de servicio','building')+
  summary('preventivos','Preventivos vencidos',d.preventivos?.vencidos||0,(d.preventivos?.semana||0)+' próximos en 7 días','calendar','warn')+
  summary('stock','Stock bajo mínimo',d.stock?.bajos||0,'Repuestos que requieren atención','box','red')+
