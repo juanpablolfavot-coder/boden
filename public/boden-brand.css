@@ -79,9 +79,9 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .btn-sm{min-height:30px;padding:6px 11px;font-size:10px;letter-spacing:.03em}
 .btn-text{font-family:'Jost',sans-serif;color:#766350;font-weight:500;font-size:11px;letter-spacing:.05em;text-transform:none}
 .btn-text:hover{text-decoration:underline}
-.hero{border-radius:0;min-height:205px;position:relative;overflow:hidden;isolation:isolate;padding:33px 35px;margin-bottom:20px;
+.hero{background-color:#302f2e;border-radius:0;min-height:205px;position:relative;overflow:hidden;isolation:isolate;padding:33px 35px;margin-bottom:20px;
   background:linear-gradient(90deg,rgba(24,22,21,.86) 0%,rgba(32,28,25,.67) 49%,rgba(32,28,25,.18) 100%),var(--hotel-spa-photo);
-  background-repeat:no-repeat;background-size:cover;background-position:center 52%;box-shadow:none}
+  background-repeat:no-repeat;background-size:cover;background-position:center 52%;box-shadow:none;background-color:#302f2e}
 .hero:after{display:none}
 .hero .overline{font-size:10px;letter-spacing:.2em;color:#dfd1c2 !important}
 .hero h2{font-family:'Jost',sans-serif;font-size:clamp(26px,2.8vw,35px);font-weight:300;letter-spacing:.025em;color:#fff;line-height:1.2;max-width:470px;margin:13px 0 8px}
@@ -159,10 +159,10 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .site-pill .dot{background:#bba48c}
 .preload-mark{font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.02em;background:#302f2e;color:#f9f5ed;border-radius:0}
 .login-layout{grid-template-columns:minmax(0,1.3fr) minmax(410px,1fr);min-height:100vh}
-.login-visual{position:relative;isolation:isolate;
+.login-visual{background-color:#302f2e;position:relative;isolation:isolate;
  background:linear-gradient(180deg,rgba(25,23,22,.48) 0%,rgba(25,23,22,.12) 46%,rgba(25,23,22,.68) 100%),var(--hotel-room-photo);
  background-position:center;background-size:cover;background-repeat:no-repeat;
- padding:48px clamp(28px,4vw,76px) 44px;color:#fff}
+ padding:48px clamp(28px,4vw,76px) 44px;color:#fff;background-color:#302f2e}
 .login-visual:after{display:none}
 .login-visual .brand{margin:0;z-index:1;position:relative}
 .login-visual .brand-name{color:#fff;font-size:40px;font-weight:300;letter-spacing:.26em}
