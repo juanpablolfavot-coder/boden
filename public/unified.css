@@ -212,3 +212,15 @@ h1{font-size:29px;font-weight:750;line-height:1.22;letter-spacing:-.05em}
  .table-actions{white-space:normal}
  .table-actions button{margin:3px}
 }
+
+
+/* Registro integrado de incidencias y órdenes */
+.section-label{margin:20px 0 10px;color:#917347;font-weight:750}
+.incident-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px}
+.incident-photo{background:#f7f7f6;border:1px solid #e5e7eb;border-radius:7px;overflow:hidden}
+.incident-photo img{width:100%;height:135px;object-fit:cover;display:block}
+.incident-photo span{display:block;padding:8px 10px;font-size:10px;color:#7a8490;text-transform:capitalize}
+.incident-history{border-top:1px solid #edf0f3;border-bottom:1px solid #edf0f3;padding:2px 0;margin-bottom:21px;max-height:260px;overflow:auto}
+.incident-actions{gap:8px;flex-wrap:wrap}
+.incident-actions button{flex:1;min-width:130px}
+@media(max-width:760px){.incident-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.incident-actions button{min-width:calc(50% - 5px)}}
