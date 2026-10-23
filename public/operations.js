@@ -92,7 +92,7 @@ function shell(){
   '<div class="header-start"><button class="menu-btn only-mobile" data-action="menu" aria-label="Abrir menú">'+I('menu')+'</button><div class="crumb"><span class="crumb-context">OPERACIONES DEL HOTEL</span><span class="crumb-sep">/</span><strong id="crumb">'+E(titles[S.page]||'BÖDEN')+'</strong></div></div>'+
   '<div class="top-actions"><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span>'+
   '<span class="head-status"><span class="dot"></span> Plataforma disponible</span></div></header>';
- const brand='<div class="brand"><div class="brand-emblem">B</div><div><div class="brand-name">BÖDEN</div><div class="brand-sub">HOTEL & SPA · MANTENIMIENTO</div></div></div>';
+ const brand='<div class="brand"><div class="brand-mark"><div class="brand-name">BÖDEN</div><div class="brand-sub">AKEN SOUL <span aria-hidden="true">·</span> OPERACIONES</div></div></div>';
  const user='<div class="side-foot"><div class="site-pill"><span class="dot"></span><span>GESTIÓN INTERNA · BÖDEN</span></div>'+
   '<div class="user-chip"><div class="avatar">'+E((S.user.nombre||'U').charAt(0).toUpperCase())+'</div><div><strong>'+E(S.user.nombre)+'</strong><small>'+E(S.user.rol.replaceAll('_',' '))+'</small></div>'+
   '<button class="logout" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">'+I('logout')+'</button></div></div>';
@@ -101,7 +101,24 @@ function shell(){
  '<div id="screen" class="content"></div></main></div>';
 }
 function login(){
- document.getElementById('app').innerHTML='<div class="login-layout"><div class="login-visual"><div class="brand"><div class="brand-emblem">B</div><div><div class="brand-name">BÖDEN</div><div class="brand-sub">MaintenanceOS</div></div></div><div><div class="overline" style="color:#d3b277;margin-bottom:18px">HOTEL & SPA · FACILITIES</div><h1>El arte de mantener todo funcionando.</h1><p>Control de instalaciones, equipos, trabajos, repuestos y herramientas en una única plataforma.</p></div><footer>BÖDEN · EXCELENCIA OPERATIVA</footer></div><div class="login-side"><form id="login-form" class="login-form"><div class="overline">ACCESO AL SISTEMA</div><h2>Bienvenido de nuevo.</h2><p class="muted">Ingresá con tus credenciales de mantenimiento.</p><div class="field"><label>Correo o usuario</label><input type="text" name="email" autocomplete="username" placeholder="usuario@boden" required></div><div class="field"><label>Contraseña</label><input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required></div><button class="btn btn-primary" type="submit">Iniciar sesión '+I('arrow')+'</button><p id="login-error" class="login-error"></p></form></div></div>';
+ document.getElementById('app').innerHTML=
+  '<div class="login-layout">'+
+  '<section class="login-visual" aria-label="Böden Hotel & Spa">'+
+  '<div class="brand"><div class="brand-mark"><div class="brand-name">BÖDEN</div><div class="brand-sub">AKEN SOUL · HOTEL & SPA</div></div></div>'+
+  '<div><div class="overline">EXCELENCIA EN CADA DETALLE</div><h1>La hospitalidad también se construye detrás de escena.</h1>'+
+  '<p>Un espacio exclusivo para cuidar las instalaciones, coordinar al equipo y mantener cada experiencia a la altura de Böden.</p></div>'+
+  '<footer>VILLA GENERAL BELGRANO · CÓRDOBA</footer>'+
+  '<div class="photo-credit">FOTOGRAFÍA · BÖDEN HOTEL & SPA / AKEN SOUL</div>'+
+  '</section>'+
+  '<section class="login-side"><form id="login-form" class="login-form">'+
+  '<div class="overline">ÁREA PRIVADA · OPERACIONES</div><h2>Bienvenido a Böden.</h2>'+
+  '<p class="muted">Ingresá para continuar con la gestión de mantenimiento del hotel.</p>'+
+  '<div class="field"><label for="login-email">Usuario</label><input id="login-email" type="text" name="email" autocomplete="username" placeholder="Tu correo de acceso" required></div>'+
+  '<div class="field"><label for="login-password">Contraseña</label><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required></div>'+
+  '<button class="btn btn-primary" type="submit">Ingresar al sistema '+I('arrow')+'</button>'+
+  '<p id="login-error" class="login-error" role="alert"></p>'+
+  '<div class="login-foot">Acceso exclusivo para personal autorizado</div>'+
+  '</form></section></div>';
 }
 async function init(){
  if(!S.token){login();return;}
