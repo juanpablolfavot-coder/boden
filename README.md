@@ -115,9 +115,10 @@ Abrí http://localhost:3000
 
 ## MaintenanceOS v2 · gestión integral del hotel (octubre 2026)
 
-La portada `/` ahora utiliza una interfaz nueva, responsive y pensada para el
-personal técnico y jefatura. El sistema anterior se conserva en `/legacy.html`
-para administrar usuarios, turnos, ubicaciones y los flujos clásicos de alertas.
+La portada `/` concentra todos los módulos operativos y administrativos en una
+única interfaz. Se incorporan pantallas nativas para personal, turnos,
+ubicaciones, categorías, historial de alertas, fotografías y asignaciones.
+La interfaz anterior se conserva solo en el historial de Git para recuperación.
 
 ### Módulos disponibles
 
@@ -147,8 +148,7 @@ para administrar usuarios, turnos, ubicaciones y los flujos clásicos de alertas
 Recepción/mucamas pueden reportar alertas. Técnicos ven activos, planificaciones,
 almacén y registran su propio trabajo; pueden consumir stock y pedir/prestar a sí
 mismos herramientas. Jefatura/administración administra catálogos técnicos,
-repuestos, planes y préstamos a otros empleados. La administración de usuarios
-permanece en la aplicación clásica.
+repuestos, planes y préstamos a otros empleados. La administración de usuarios, turnos y sectores se realiza desde el mismo menú.
 
 ### Despliegue
 
