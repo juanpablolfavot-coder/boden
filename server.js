@@ -19,6 +19,12 @@ app.use('/api/usuarios',  require('./src/routes/usuarios'));
 app.use('/api/turnos',    require('./src/routes/turnos'));
 app.use('/api/push',      require('./src/routes/push'));
 app.use('/api/reportes',  require('./src/routes/reportes'));
+app.use('/api/equipos',       require('./src/routes/equipos'));
+app.use('/api/preventivos',   require('./src/routes/preventivos'));
+app.use('/api/trabajos',      require('./src/routes/trabajos'));
+app.use('/api/stock',         require('./src/routes/stock'));
+app.use('/api/herramientas',  require('./src/routes/herramientas'));
+app.use('/api/centro',        require('./src/routes/centro'));
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
