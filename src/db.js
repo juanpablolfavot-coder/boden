@@ -51,13 +51,14 @@ async function seedIfEmpty() {
   console.log('[BODEN] Base vacía: cargando datos iniciales…');
   const hash = (p) => bcrypt.hashSync(p, 10);
 
+  // En instalaciones nuevas crear solo un administrador, nunca usuarios de prueba
+  // con contraseñas publicadas en el repositorio.
+  const adminPassword = process.env.BODEN_ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 16) {
+    throw new Error('Configurar BODEN_ADMIN_PASSWORD con al menos 16 caracteres');
+  }
   const usuarios = [
-    ['Administrador', 'admin@boden',     'boden123', 'admin'],
-    ['Jefe Mantenimiento', 'jefe@boden', 'boden123', 'jefe_mantenimiento'],
-    ['Diego', 'diego@boden',             'boden123', 'mantenimiento'],
-    ['Martín', 'martin@boden',           'boden123', 'mantenimiento'],
-    ['Recepción', 'recepcion@boden',     'boden123', 'recepcion'],
-    ['Mucama', 'mucama@boden',           'boden123', 'mucama'],
+    ['Administrador', 'admin@boden', adminPassword, 'admin'],
   ];
   for (const [nombre, email, pass, rol] of usuarios) {
     await pool.query(
@@ -92,7 +93,7 @@ async function seedIfEmpty() {
   }
 
   console.log('[BODEN] Datos iniciales cargados.');
-  console.log('[BODEN] Usuario admin: admin@boden / boden123');
+  console.log('[BODEN] Cuenta de administrador creada (credenciales configuradas de forma privada).');
 }
 
 module.exports = { pool, query, ensureSchema };
