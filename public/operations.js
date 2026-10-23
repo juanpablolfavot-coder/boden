@@ -37,7 +37,7 @@ const I=(name)=>'<span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true">
 const E=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fdate=(x,time=false)=>{if(!x)return '—';try{
  // PostgreSQL DATE serializado a medianoche UTC no debe perder un día en Argentina.
- const onlyDate=!time&&/^\\d{4}-\\d{2}-\\d{2}/.test(String(x));
+ const onlyDate=!time&&/^\d{4}-\d{2}-\d{2}/.test(String(x));
  const value=onlyDate?new Date(String(x).slice(0,10)+'T12:00:00Z'):new Date(x);
  return value.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:time?undefined:'numeric',timeZone:'America/Argentina/Cordoba',...(time?{hour:'2-digit',minute:'2-digit'}:{})});
  }catch{return E(x)}};
