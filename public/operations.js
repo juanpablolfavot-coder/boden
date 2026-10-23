@@ -35,7 +35,12 @@ const icons={
 };
 const I=(name)=>'<span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true">'+(icons[name]||icons.grid)+'</svg></span>';
 const E=(x)=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fdate=(x,time=false)=>{if(!x)return '—';try{return new Date(x).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:time?undefined:'numeric',timeZone:'America/Argentina/Cordoba',...(time?{hour:'2-digit',minute:'2-digit'}:{})});}catch{return E(x)}};
+const fdate=(x,time=false)=>{if(!x)return '—';try{
+ // PostgreSQL DATE serializado a medianoche UTC no debe perder un día en Argentina.
+ const onlyDate=!time&&/^\\d{4}-\\d{2}-\\d{2}/.test(String(x));
+ const value=onlyDate?new Date(String(x).slice(0,10)+'T12:00:00Z'):new Date(x);
+ return value.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:time?undefined:'numeric',timeZone:'America/Argentina/Cordoba',...(time?{hour:'2-digit',minute:'2-digit'}:{})});
+ }catch{return E(x)}};
 const dateField=(x)=>x?String(x).slice(0,10):'';
 const number=x=>Number(x||0).toLocaleString('es-AR',{maximumFractionDigits:2});
 const status=(v)=>{const labels={operativo:'Operativo',mantenimiento:'En mantenimiento',fuera_servicio:'Fuera de servicio',baja:'De baja',disponible:'Disponible',prestada:'Prestada',excelente:'Excelente',buena:'Buena',regular:'Regular',deficiente:'Deficiente',pendiente:'Pendiente',en_curso:'En curso',realizado:'Realizado',nueva:'Sin tomar',asignada:'Asignada',en_proceso:'En proceso',resuelta:'Resuelta',cerrada:'Cerrada',cancelada:'Cancelada',urgente:'Urgente',alta:'Alta',media:'Media',baja:'Baja',correctivo:'Correctivo',preventivo:'Preventivo',inspeccion:'Inspección',mejora:'Mejora',emergencia:'Emergencia'};return labels[v]||v||'—'};
