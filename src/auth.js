@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const SECRET = process.env.JWT_SECRET || 'dev-secret-cambiame';
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET || SECRET.length < 32) {
+  throw new Error('JWT_SECRET debe estar configurado con al menos 32 caracteres');
+}
 
 // Grupos de roles para chequear permisos cómodo.
 const ROLES = {
