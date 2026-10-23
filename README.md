@@ -10,10 +10,18 @@ Stack: **Node.js + Express + PostgreSQL + JWT**, frontend PWA (HTML/CSS/JS), hos
 
 ---
 
-## Usuarios de prueba (se cargan solos la primera vez)
+## Acceso inicial seguro
 
-| Email | Contraseña | Rol |
-|-------|-----------|-----|
+En una base nueva se crea **solo el administrador** con email `admin@boden`.
+La contraseña inicial debe definirse mediante la variable privada
+`BODEN_ADMIN_PASSWORD` (mínimo 16 caracteres). El secreto de sesiones
+`JWT_SECRET` es obligatorio (mínimo 32 caracteres).
+
+No se crean usuarios de prueba ni contraseñas conocidas. Crear y asignar
+las cuentas de empleados desde el panel de administración y cambiar la
+contraseña inicial antes de entregar el sistema al hotel.
+
+-------|-----------|-----|
 | admin@boden | boden123 | admin |
 | jefe@boden | boden123 | jefe de mantenimiento |
 | diego@boden | boden123 | mantenimiento |
@@ -62,7 +70,8 @@ En el Web Service → pestaña **Environment**, agregá:
 | Key | Value |
 |-----|-------|
 | `DATABASE_URL` | la Internal Database URL del paso 1 |
-| `JWT_SECRET` | una frase larga y random (inventala) |
+| `JWT_SECRET` | secreto aleatorio de 32+ caracteres |
+| `BODEN_ADMIN_PASSWORD` | contraseña inicial aleatoria de 16+ caracteres |
 
 Guardá. Render redeploya solo. **La base de datos se crea sola** la primera vez que arranca
 (crea las tablas y carga los usuarios de prueba). No hace falta correr scripts a mano.
