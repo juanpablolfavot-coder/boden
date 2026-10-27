@@ -1,8 +1,7 @@
-# BÖDEN · Sistema de Alertas de Mantenimiento
+# BÖDEN · Mantenimiento Hotelero
 
-PWA para que el personal del Hotel BÖDEN reporte problemas de mantenimiento y el
-equipo los tome, resuelva y cierre. Anda en **compu y celular**, se instala como app
-y manda **notificaciones push**.
+PWA deliberadamente simple para que el personal reporte incidencias, los técnicos
+ejecuten y documenten, y la supervisión asigne y verifique el cierre.
 
 Stack: **Node.js + Express + PostgreSQL + JWT**, frontend PWA (HTML/CSS/JS), hosting **Render**.
 
@@ -21,15 +20,8 @@ No se crean usuarios de prueba ni contraseñas conocidas. Crear y asignar
 las cuentas de empleados desde el panel de administración y cambiar la
 contraseña inicial antes de entregar el sistema al hotel.
 
--------|-----------|-----|
-| admin@boden | boden123 | admin |
-| jefe@boden | boden123 | jefe de mantenimiento |
-| diego@boden | boden123 | mantenimiento |
-| martin@boden | boden123 | mantenimiento |
-| recepcion@boden | boden123 | recepción (reporta) |
-| mucama@boden | boden123 | mucama (reporta) |
-
-> ⚠️ Cambiá estas contraseñas antes de usarlo en serio.
+No se publican ni se generan usuarios de prueba, contraseñas conocidas,
+habitaciones, turnos ni equipos ficticios.
 
 ---
 
@@ -128,11 +120,8 @@ sin replicar la web pública ni incorporar módulos de reservas.
   y formularios; `Inter` para números de métricas y datos operativos.
 - Wordmark tipográfico BÖDEN / AKEN SOUL; reemplazar por SVG oficial
   suministrado por el hotel cuando esté disponible.
-- Fotografía auténtica de la propiedad publicada por AKEN Hotels:
-  habitación en la pantalla de acceso; sector spa/piscina en el panel.
-  Actualmente referenciada mediante URLs del sitio oficial AKEN; en producción
-  conviene obtener autorización y alojar copias optimizadas bajo control del
-  hotel, porque los enlaces externos pueden cambiar o bloquearse.
+- Fondos editoriales propios en CSS: no dependen de fotografías, fuentes ni
+  otros recursos externos que puedan cambiar o bloquearse.
 - Estética editorial: navegación silenciosa, espacios consistentes,
   bordes discretos, iconografía simple y contrastes suficientemente legibles.
 - **Una única aplicación** para alertas, trabajos, equipos, mantenimiento

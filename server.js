@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { ensureSchema } = require('./src/db');
+const { sweepDueNotifications } = require('./src/notifications');
 
 const app = express();
 app.disable('x-powered-by');
@@ -26,6 +27,7 @@ app.use('/api/catalogos', require('./src/routes/catalogos'));
 app.use('/api/usuarios',  require('./src/routes/usuarios'));
 app.use('/api/turnos',    require('./src/routes/turnos'));
 app.use('/api/push',      require('./src/routes/push'));
+app.use('/api/notificaciones', require('./src/routes/notificaciones'));
 app.use('/api/reportes',  require('./src/routes/reportes'));
 app.use('/api/equipos',       require('./src/routes/equipos'));
 app.use('/api/preventivos',   require('./src/routes/preventivos'));
@@ -46,7 +48,12 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   try {
     await ensureSchema();
-    app.listen(PORT, () => console.log(`[BODEN] Servidor en http://localhost:${PORT}`));
+    app.listen(PORT, '0.0.0.0', () => console.log(`[BODEN] Servidor en http://0.0.0.0:${PORT}`));
+    if (process.env.BODEN_SIMPLE_MIGRATION === '1') {
+      sweepDueNotifications().catch((e) => console.error('[BODEN] Vencimientos:', e.message));
+      const timer = setInterval(() => sweepDueNotifications().catch((e) => console.error('[BODEN] Vencimientos:', e.message)), 5 * 60 * 1000);
+      timer.unref();
+    }
   } catch (e) {
     console.error('[BODEN] No se pudo iniciar:', e);
     process.exit(1);

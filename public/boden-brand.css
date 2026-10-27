@@ -1,6 +1,6 @@
 /* BÖDEN / AKEN SOUL — Identity v4
    Hotel visual language translated into an accessible internal CMMS interface.
-   Images: Official AKEN Hotels property photography (remote / with CSS fallback).
+   Sin recursos externos: superficies editoriales estables y controladas por la app.
    This overrides legacy component styles without changing their functionality. */
 :root{
   --night:#302f2e;
@@ -24,11 +24,11 @@
   --lux-accent:#b79a80;
   --lux-ink:#312e2b;
   --lux-muted:#77726d;
-  --hotel-room-photo:url("https://akenhotels.com/wp-content/uploads/2025/06/habitacion-cama-vista-hotel.webp");
-  --hotel-spa-photo:url("https://akenhotels.com/wp-content/uploads/2025/06/05-1024x687.webp");
+  --hotel-room-photo:none;
+  --hotel-spa-photo:none;
 }
 html{font-size:14px}
-body{font-family:'Jost','Inter',sans-serif;background:var(--lux-milk);color:var(--lux-ink);font-weight:400;letter-spacing:.004em}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--lux-milk);color:var(--lux-ink);font-weight:400;letter-spacing:.004em}
 h1,h2,h3,.brand-name,.login-visual h1{font-family:'Jost','Inter',sans-serif;font-weight:400;letter-spacing:.025em}
 h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spacing:.02em}
 .serif{font-family:'Jost','Inter',sans-serif;font-weight:400}
@@ -65,6 +65,9 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .crumb strong{font-family:'Jost',sans-serif;letter-spacing:.04em;font-size:12px;font-weight:500;color:#453f3a}
 .date-chip{font-family:'Jost',sans-serif;letter-spacing:.02em;color:#8e8881;font-weight:400}
 .head-status{font-size:10px;color:#857d75;letter-spacing:.03em}
+.notice-btn{position:relative;border:0;background:transparent;color:#625950;padding:8px;cursor:pointer}
+.notice-btn .icon{width:18px;height:18px}
+.notice-count{position:absolute;right:1px;top:1px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:#a7554c;color:#fff;font:600 9px/16px 'Segoe UI',sans-serif;text-align:center}
 .content{padding:36px clamp(22px,3.2vw,57px) 76px;max-width:1700px}
 .page-head{margin-bottom:24px;align-items:end}
 .page-head .overline{color:#a58e78 !important;letter-spacing:.2em}
@@ -80,7 +83,7 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .btn-text{font-family:'Jost',sans-serif;color:#766350;font-weight:500;font-size:11px;letter-spacing:.05em;text-transform:none}
 .btn-text:hover{text-decoration:underline}
 .hero{background-color:#302f2e;border-radius:0;min-height:205px;position:relative;overflow:hidden;isolation:isolate;padding:33px 35px;margin-bottom:20px;
-  background:linear-gradient(90deg,rgba(24,22,21,.86) 0%,rgba(32,28,25,.67) 49%,rgba(32,28,25,.18) 100%),var(--hotel-spa-photo);
+  background:linear-gradient(120deg,#262321 0%,#4a4139 62%,#8d7764 100%);
   background-repeat:no-repeat;background-size:cover;background-position:center 52%;box-shadow:none;background-color:#302f2e}
 .hero:after{display:none}
 .hero .overline{font-size:10px;letter-spacing:.2em;color:#dfd1c2 !important}
@@ -160,7 +163,7 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .preload-mark{font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.02em;background:#302f2e;color:#f9f5ed;border-radius:0}
 .login-layout{grid-template-columns:minmax(0,1.3fr) minmax(410px,1fr);min-height:100vh}
 .login-visual{background-color:#302f2e;position:relative;isolation:isolate;
- background:linear-gradient(180deg,rgba(25,23,22,.48) 0%,rgba(25,23,22,.12) 46%,rgba(25,23,22,.68) 100%),var(--hotel-room-photo);
+ background:radial-gradient(circle at 72% 18%,#947d68 0,#594b40 23%,#302b27 56%,#211e1b 100%);
  background-position:center;background-size:cover;background-repeat:no-repeat;
  padding:48px clamp(28px,4vw,76px) 44px;color:#fff;background-color:#302f2e}
 .login-visual:after{display:none}
@@ -180,7 +183,7 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .login-form .btn-primary{min-height:50px;width:100%;margin-top:15px}
 .login-error{font-weight:500}
 .login-foot{font-family:'Jost',sans-serif;color:#9a8b7d;text-transform:uppercase;font-size:10px;letter-spacing:.12em;margin-top:37px;text-align:center}
-.photo-credit{position:absolute;left:clamp(28px,4vw,76px);bottom:24px;color:#ffffffcf;font-size:10px;font-weight:350;letter-spacing:.08em}
+.photo-credit{display:none;position:absolute;left:clamp(28px,4vw,76px);bottom:24px;color:#ffffffcf;font-size:10px;font-weight:350;letter-spacing:.08em}
 .login-visual footer{margin-bottom:34px}
 :focus-visible{outline:2px solid #aa947e;outline-offset:2px}
 @media(max-width:1280px){

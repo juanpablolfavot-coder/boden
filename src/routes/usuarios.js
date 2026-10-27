@@ -24,6 +24,9 @@ router.post('/', auth, requireRole('admin'), async (req, res) => {
   if (!ROLES_VALIDOS.includes(rol)) {
     return res.status(400).json({ error: 'Rol inválido' });
   }
+  if (password.length < 12) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 12 caracteres' });
+  }
   try {
     const hash = bcrypt.hashSync(password, 10);
     const { rows } = await pool.query(
@@ -62,8 +65,8 @@ router.patch('/:id', auth, requireRole('admin'), async (req, res) => {
 // POST /api/usuarios/:id/password  (resetear contraseña)
 router.post('/:id/password', auth, requireRole('admin'), async (req, res) => {
   const { password } = req.body || {};
-  if (!password || password.length < 4) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+  if (!password || password.length < 12) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 12 caracteres' });
   }
   const hash = bcrypt.hashSync(password, 10);
   const { rowCount } = await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, req.params.id]);

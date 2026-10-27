@@ -1,7 +1,9 @@
 const express = require('express');
 const { pool } = require('../db');
 const { auth, requireRole } = require('../auth');
-const { notifyUsers, maintenanceUserIds } = require('../push');
+const { maintenanceUserIds } = require('../push');
+const { notify, audit } = require('../notifications');
+const { validateTransition } = require('../maintenance-policy');
 
 const router = express.Router();
 
@@ -15,12 +17,17 @@ const SELECT_ALERTA = `
          u.nombre  AS ubicacion,
          u.tipo    AS ubicacion_tipo,
          ur.nombre AS reportado_nombre,
-         ua.nombre AS asignado_nombre
+         ua.nombre AS asignado_nombre,
+         e.nombre AS equipo_nombre,
+         e.codigo AS equipo_codigo,
+         uv.nombre AS verificado_nombre
   FROM alertas a
   LEFT JOIN categorias c  ON c.id = a.categoria_id
   LEFT JOIN ubicaciones u ON u.id = a.ubicacion_id
   LEFT JOIN usuarios ur   ON ur.id = a.reportado_por
   LEFT JOIN usuarios ua   ON ua.id = a.asignado_a
+  LEFT JOIN equipos e     ON e.id = a.equipo_id
+  LEFT JOIN usuarios uv   ON uv.id = a.verificada_por
 `;
 
 async function registrarHistorial(alertaId, evento, usuarioId, nota) {
@@ -33,6 +40,10 @@ async function registrarHistorial(alertaId, evento, usuarioId, nota) {
 async function getAlerta(id) {
   const { rows } = await pool.query(`${SELECT_ALERTA} WHERE a.id = $1`, [id]);
   return rows[0];
+}
+
+function canSeeAlert(user, alerta) {
+  return !['recepcion', 'mucama', 'personal'].includes(user.rol) || Number(alerta.reportado_por) === Number(user.id);
 }
 
 // GET /api/alertas?estado=&prioridad=&asignado=&mias=
@@ -68,7 +79,7 @@ router.get('/', auth, async (req, res) => {
 
 // POST /api/alertas  (reportar)
 router.post('/', auth, async (req, res) => {
-  const { titulo, descripcion, categoria_id, ubicacion_id, prioridad, foto, vip } = req.body || {};
+  const { titulo, descripcion, categoria_id, ubicacion_id, equipo_id, prioridad, foto, vip } = req.body || {};
   if (!titulo || !ubicacion_id) {
     return res.status(400).json({ error: 'Faltan título y ubicación' });
   }
@@ -76,9 +87,9 @@ router.post('/', auth, async (req, res) => {
   try {
     const num = (await pool.query("SELECT nextval('alerta_numero_seq') AS n")).rows[0].n;
     const { rows } = await pool.query(
-      `INSERT INTO alertas (numero, titulo, descripcion, categoria_id, ubicacion_id, prioridad, reportado_por, vip)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [num, titulo.trim(), descripcion || null, categoria_id || null, ubicacion_id, prio, req.user.id, !!vip]
+      `INSERT INTO alertas (numero, titulo, descripcion, categoria_id, ubicacion_id, equipo_id, prioridad, reportado_por, vip)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [num, titulo.trim(), descripcion || null, categoria_id || null, ubicacion_id, equipo_id || null, prio, req.user.id, !!vip]
     );
     const id = rows[0].id;
     await registrarHistorial(id, 'Alerta creada', req.user.id, `Prioridad ${prio}`);
@@ -89,7 +100,8 @@ router.post('/', auth, async (req, res) => {
 
     // Push a mantenimiento + jefe
     const ids = await maintenanceUserIds();
-    await notifyUsers(ids, {
+    await notify(ids, {
+      key: `alerta-nueva-${id}`,
       title: prio === 'urgente' ? '🔴 Alerta URGENTE' : 'Nueva alerta',
       body: `${alerta.codigo} · ${alerta.titulo} (${alerta.ubicacion})`,
       url: '/',
@@ -106,6 +118,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'Alerta no encontrada' });
+  if (!canSeeAlert(req.user, alerta)) return res.status(403).json({ error: 'No tenés acceso a esta alerta' });
   const adj = await pool.query(
     'SELECT url, tipo, created_at FROM adjuntos WHERE alerta_id = $1 ORDER BY created_at',
     [req.params.id]
@@ -116,6 +129,9 @@ router.get('/:id', auth, async (req, res) => {
 
 // GET /api/alertas/:id/historial
 router.get('/:id/historial', auth, async (req, res) => {
+  const alerta = await getAlerta(req.params.id);
+  if (!alerta) return res.status(404).json({ error: 'Alerta no encontrada' });
+  if (!canSeeAlert(req.user, alerta)) return res.status(403).json({ error: 'No tenés acceso a esta alerta' });
   const { rows } = await pool.query(
     `SELECT h.*, u.nombre AS usuario_nombre
      FROM alerta_historial h LEFT JOIN usuarios u ON u.id = h.usuario_id
@@ -129,7 +145,7 @@ router.get('/:id/historial', auth, async (req, res) => {
 router.patch('/:id/tomar', auth, requireRole('mantenimiento', 'jefe_mantenimiento', 'admin'), async (req, res) => {
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'No encontrada' });
-  if (!['nueva', 'asignada'].includes(alerta.estado)) {
+  if (alerta.estado !== 'nueva' || alerta.asignado_a) {
     return res.status(409).json({ error: 'Esta alerta ya fue tomada' });
   }
   await pool.query(
@@ -142,18 +158,23 @@ router.patch('/:id/tomar', auth, requireRole('mantenimiento', 'jefe_mantenimient
 
 // PATCH /api/alertas/:id/asignar  (jefe asigna a alguien)
 router.patch('/:id/asignar', auth, requireRole('jefe_mantenimiento', 'admin'), async (req, res) => {
-  const { asignado_a } = req.body || {};
+  const { asignado_a, vence_at } = req.body || {};
   if (!asignado_a) return res.status(400).json({ error: 'Falta el operario' });
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'No encontrada' });
+  const tecnico = await pool.query("SELECT id FROM usuarios WHERE id=$1 AND activo AND rol IN ('mantenimiento','jefe_mantenimiento')", [asignado_a]);
+  if (!tecnico.rowCount) return res.status(400).json({ error: 'Seleccioná un técnico activo' });
+  if (vence_at && Number.isNaN(Date.parse(vence_at))) return res.status(400).json({ error: 'Vencimiento inválido' });
 
   await pool.query(
-    `UPDATE alertas SET asignado_a = $1, estado = 'asignada', tomada_at = COALESCE(tomada_at, now()) WHERE id = $2`,
-    [asignado_a, alerta.id]
+    `UPDATE alertas SET asignado_a=$1,vence_at=$2,estado='asignada',tomada_at=COALESCE(tomada_at,now()),verificada_por=NULL,verificada_at=NULL,verificacion_nota=NULL WHERE id=$3`,
+    [asignado_a, vence_at || null, alerta.id]
   );
   const upd = await getAlerta(alerta.id);
   await registrarHistorial(alerta.id, 'Asignada', req.user.id, `A ${upd.asignado_nombre}`);
-  await notifyUsers([Number(asignado_a)], {
+  await audit(pool,'alerta',alerta.id,'asignada',req.user.id,{asignado_a:Number(asignado_a),vence_at:vence_at||null});
+  await notify([Number(asignado_a)], {
+    key: `alerta-asignada-${alerta.id}-${asignado_a}`,
     title: 'Te asignaron una alerta',
     body: `${upd.codigo} · ${upd.titulo} (${upd.ubicacion})`,
     url: '/',
@@ -167,27 +188,32 @@ router.patch('/:id/estado', auth, requireRole('mantenimiento', 'jefe_mantenimien
   const alerta = await getAlerta(req.params.id);
   if (!alerta) return res.status(404).json({ error: 'No encontrada' });
 
+  const action = estado === 'cerrada' ? 'aprobar' : estado;
+  const check = validateTransition(req.user, alerta, action, { nota, foto });
+  if (!check.ok) return res.status(check.status).json({ error: check.error });
   const transiciones = {
-    en_proceso: { from: ['asignada', 'nueva'], set: `estado='en_proceso'`, ev: 'En proceso' },
+    en_proceso: { set: `estado='en_proceso'`, ev: 'Trabajo iniciado' },
     pausar:     { from: ['en_proceso'], set: `estado='asignada'`, ev: 'Pausada' },
-    resuelta:   { from: ['en_proceso', 'asignada'], set: `estado='resuelta', resuelta_at=now()`, ev: 'Resuelta' },
-    cerrada:    { from: ['resuelta'], set: `estado='cerrada', cerrada_at=now()`, ev: 'Cerrada y verificada', jefe: true },
-    cancelada:  { from: ['nueva', 'asignada', 'en_proceso', 'resuelta'], set: `estado='cancelada'`, ev: 'Cancelada' },
-    reabrir:    { from: ['resuelta', 'cerrada'], set: `estado='en_proceso', cerrada_at=NULL`, ev: 'Reabierta' },
+    resuelta:   { set: `estado='resuelta', resuelta_at=now()`, ev: 'Enviada a verificación' },
+    aprobar:    { set: `estado='cerrada',cerrada_at=now(),verificada_por=${Number(req.user.id)},verificada_at=now(),verificacion_nota=$2`, ev: 'Cierre aprobado por supervisión' },
+    rechazar:   { set: `estado='en_proceso',resuelta_at=NULL,verificada_por=${Number(req.user.id)},verificada_at=now(),verificacion_nota=$2`, ev: 'Cierre rechazado por supervisión' },
+    cancelada:  { set: `estado='cancelada'`, ev: 'Cancelada' },
+    reabrir:    { set: `estado='en_proceso', cerrada_at=NULL`, ev: 'Reabierta' },
   };
-  const t = transiciones[estado];
-  if (!t) return res.status(400).json({ error: 'Estado inválido' });
-  if (t.jefe && !['jefe_mantenimiento', 'admin'].includes(req.user.rol)) {
-    return res.status(403).json({ error: 'Solo el jefe puede cerrar' });
-  }
-  if (!t.from.includes(alerta.estado)) {
-    return res.status(409).json({ error: `No se puede pasar de ${alerta.estado} a ${estado}` });
-  }
+  const t = transiciones[action];
 
-  await pool.query(`UPDATE alertas SET ${t.set} WHERE id = $1`, [alerta.id]);
+  const params=[alerta.id];if(['aprobar','rechazar'].includes(action))params.push(nota||null);
+  await pool.query(`UPDATE alertas SET ${t.set} WHERE id = $1`, params);
   await registrarHistorial(alerta.id, t.ev, req.user.id, nota || null);
+  await audit(pool,'alerta',alerta.id,action,req.user.id,{nota:nota||null});
   if (estado === 'resuelta' && foto && typeof foto === 'string' && foto.startsWith('data:image')) {
     await pool.query('INSERT INTO adjuntos (alerta_id, url, tipo) VALUES ($1,$2,$3)', [alerta.id, foto, 'solucion']);
+  }
+  if (action === 'rechazar') {
+    await notify([Number(alerta.asignado_a)], { key:`alerta-rechazada-${alerta.id}-${Date.now()}`, title: 'Trabajo rechazado por supervisión', body: `${alerta.codigo} · ${nota}`, url: '/' });
+  }
+  if (action === 'aprobar') {
+    await notify([Number(alerta.reportado_por), Number(alerta.asignado_a)], { key:`alerta-aprobada-${alerta.id}`, title: 'Cierre aprobado', body: `${alerta.codigo} · ${alerta.titulo}`, url: '/' });
   }
   res.json(await getAlerta(alerta.id));
 });

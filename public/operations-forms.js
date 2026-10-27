@@ -232,7 +232,20 @@ const alterAlert=(name,state)=>OS.actions[name]=async(id)=>{
  modal('Cambiar estado · '+status(state),grid(textarea('Nota de seguimiento','nota')),
  async b=>patch('/alertas/'+id+'/estado',{estado:state,nota:b.nota}),'Confirmar '+status(state).toLowerCase());
 };
-alterAlert('alertStart','en_proceso');alterAlert('alertResolve','resuelta');alterAlert('alertClose','cerrada');alterAlert('alertReopen','reabrir');
+alterAlert('alertStart','en_proceso');alterAlert('alertClose','cerrada');alterAlert('alertReject','rechazar');alterAlert('alertReopen','reabrir');
+OS.actions.alertResolve=async(id)=>{
+ OS.close();
+ modal('Enviar a verificación',grid(
+  textarea('Trabajo realizado y resultado *','nota'),
+  '<div class="field span2"><label>Fotografía de evidencia *</label><input type="file" name="archivo_foto" accept="image/*" capture="environment" required></div>'
+ ),async(b,form)=>{
+  const file=form.querySelector('input[name="archivo_foto"]')?.files?.[0];
+  if(!file||!file.type.startsWith('image/'))throw Error('Adjuntá una fotografía de evidencia');
+  if(file.size>2500000)throw Error('La fotografía supera 2,5 MB');
+  const foto=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(Error('No se pudo leer la fotografía'));r.readAsDataURL(file);});
+  return patch('/alertas/'+id+'/estado',{estado:'resuelta',nota:b.nota,foto});
+ },'Enviar a supervisión');
+};
 OS.actions.newWorkForAlert=async(id)=>{
  OS.close();await OS.actions.newWork();
  const form=document.getElementById('dialog-form');if(form?.elements.alerta_id)form.elements.alerta_id.value=id;

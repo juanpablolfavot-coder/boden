@@ -1,6 +1,6 @@
 'use strict';
 (function(){
-const S={token:localStorage.getItem('boden_token'),user:null,page:'inicio',data:{},q:'',filter:'',menu:false,cat:null};
+const S={token:localStorage.getItem('boden_token'),user:null,page:'inicio',data:{},q:'',filter:'',menu:false,cat:null,notifications:[]};
 const icons={
  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/>',
@@ -57,25 +57,25 @@ function toast(msg,error=false){
   const el=document.getElementById('toast');el.textContent=msg;el.className='toast visible'+(error?' error':'');
   clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>el.className='toast',4200);
 }
+async function refreshNotifications(){
+ try{S.notifications=await api('/notificaciones');const n=S.notifications.filter(x=>!x.leida_at).length;const el=document.querySelector('.notice-count');if(el){el.textContent=n;el.hidden=!n;}}catch{}
+}
 const isManager=()=>['admin','jefe_mantenimiento'].includes(S.user?.rol);
 const isMaint=()=>['admin','jefe_mantenimiento','mantenimiento'].includes(S.user?.rol);
 const items=[
- {id:'inicio',text:'Panel general',icon:'grid',group:'main'},
- {id:'alertas',text:'Avisos e incidencias',icon:'bell',group:'ops'},
- {id:'trabajos',text:'Trabajos realizados',icon:'clipboard',group:'ops'},
- {id:'preventivos',text:'Mantenimiento planificado',icon:'calendar',group:'ops'},
- {id:'equipos',text:'Equipos e instalaciones',icon:'building',group:'assets'},
- {id:'stock',text:'Repuestos y almacén',icon:'box',group:'assets'},
- {id:'herramientas',text:'Herramientas',icon:'tool',group:'assets'},
- {id:'personal',text:'Personal y permisos',icon:'users',group:'admin',admin:true},
- {id:'turnos',text:'Turnos y guardias',icon:'clock',group:'admin',admin:true},
- {id:'espacios',text:'Habitaciones y sectores',icon:'map',group:'admin',admin:true}
+ {id:'inicio',text:'Supervisión',icon:'grid',group:'main'},
+ {id:'alertas',text:'Incidencias y tareas',icon:'bell',group:'ops'},
+ {id:'preventivos',text:'Preventivos',icon:'calendar',group:'ops'},
+ {id:'equipos',text:'Equipos del hotel',icon:'building',group:'assets'},
+ {id:'trabajos',text:'Historial técnico',icon:'clipboard',group:'assets'},
+ {id:'personal',text:'Personas y roles',icon:'users',group:'admin',admin:true},
+ {id:'espacios',text:'Sectores del hotel',icon:'map',group:'admin',admin:true}
 ];
 const titles=Object.fromEntries(items.map(x=>[x.id,x.text]));
 const groups=[
  {id:'main',label:'RESUMEN'},
- {id:'ops',label:'TRABAJO DIARIO'},
- {id:'assets',label:'RECURSOS DEL HOTEL'},
+ {id:'ops',label:'TRABAJO'},
+ {id:'assets',label:'CONTROL'},
  {id:'admin',label:'CONFIGURACIÓN'}
 ];
 const isAdmin=()=>S.user?.rol==='admin';
@@ -90,8 +90,8 @@ function shell(){
  }).join('');
  const header='<header class="topbar">'+
   '<div class="header-start"><button class="menu-btn only-mobile" data-action="menu" aria-label="Abrir menú">'+I('menu')+'</button><div class="crumb"><span class="crumb-context">OPERACIONES DEL HOTEL</span><span class="crumb-sep">/</span><strong id="crumb">'+E(titles[S.page]||'BÖDEN')+'</strong></div></div>'+
-  '<div class="top-actions"><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span>'+
-  '<span class="head-status"><span class="dot"></span> Plataforma disponible</span></div></header>';
+  '<div class="top-actions"><button class="notice-btn" data-action="notifications" aria-label="Notificaciones">'+I('bell')+'<span class="notice-count" hidden></span></button><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span>'+
+  '<span class="head-status"><span class="dot"></span> Sistema operativo</span></div></header>';
  const brand='<div class="brand"><div class="brand-mark"><div class="brand-name">BÖDEN</div><div class="brand-sub">AKEN SOUL <span aria-hidden="true">·</span> OPERACIONES</div></div></div>';
  const user='<div class="side-foot"><div class="site-pill"><span class="dot"></span><span>GESTIÓN INTERNA · BÖDEN</span></div>'+
   '<div class="user-chip"><div class="avatar">'+E((S.user.nombre||'U').charAt(0).toUpperCase())+'</div><div><strong>'+E(S.user.nombre)+'</strong><small>'+E(S.user.rol.replaceAll('_',' '))+'</small></div>'+
@@ -122,7 +122,7 @@ function login(){
 }
 async function init(){
  if(!S.token){login();return;}
- try{const result=await api('/auth/me');S.user=result.user; S.page=isMaint()?'inicio':'alertas';shell();await navigate(S.page);}catch(e){S.token=null;localStorage.removeItem('boden_token');login();}
+ try{const result=await api('/auth/me');S.user=result.user; S.page=isMaint()?'inicio':'alertas';shell();await refreshNotifications();await navigate(S.page);}catch(e){S.token=null;localStorage.removeItem('boden_token');login();}
 }
 async function navigate(page){
  if(!isMaint()&&page!=='alertas')page='alertas';
@@ -159,6 +159,7 @@ const pageHead=(title,subtitle,action='')=>'<div class="page-head"><div><div cla
 const btn=(text,action,id='',style='btn-primary')=>'<button class="btn '+style+'" data-action="'+E(action)+'" '+(id!==''?'data-id="'+E(id)+'"':'')+'>'+E(text)+'</button>';
 const table=(columns,rows)=>'<div class="panel table-wrap"><table class="data-table"><thead><tr>'+columns.map(x=>'<th>'+E(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
 const OS=window.OS={S,I,E,fdate,dateField,number,status,badge,api,toast,isManager,isMaint,login,init,navigate,logout,modal,close,field,textarea,select,opts,empty,pageHead,btn,table,actions:{},loadPage:async()=>{},filterView:()=>{}};
+OS.actions.notifications=async()=>{await refreshNotifications();const rows=S.notifications.length?S.notifications.map(x=>'<div class="activity"><div class="activity-symbol">'+I('bell')+'</div><div class="activity-main"><strong>'+E(x.titulo)+'</strong><small>'+E(x.cuerpo)+' · '+E(fdate(x.created_at,true))+'</small></div></div>').join(''):empty('Sin novedades','No tenés notificaciones pendientes.','check');modal('Notificaciones',rows,null);await Promise.all(S.notifications.filter(x=>!x.leida_at).map(x=>api('/notificaciones/'+x.id+'/leida',{method:'PATCH'}).catch(()=>null)));await refreshNotifications();};
 document.addEventListener('click',async(e)=>{
  const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return;}
  const act=e.target.closest('[data-action]');if(!act)return;
@@ -173,7 +174,7 @@ document.addEventListener('click',async(e)=>{
 document.addEventListener('submit',async(e)=>{
  if(e.target.id!=='login-form')return;
  e.preventDefault();const f=new FormData(e.target),b=e.target.querySelector('button');b.disabled=true;
- try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:f.get('email'),password:f.get('password')})});S.token=r.token;S.user=r.user;localStorage.setItem('boden_token',r.token);localStorage.setItem('boden_user',JSON.stringify(r.user));shell();await navigate(isMaint()?'inicio':'alertas');}
+ try{const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email:f.get('email'),password:f.get('password')})});S.token=r.token;S.user=r.user;localStorage.setItem('boden_token',r.token);localStorage.setItem('boden_user',JSON.stringify(r.user));shell();await refreshNotifications();await navigate(isMaint()?'inicio':'alertas');}
  catch(error){document.getElementById('login-error').textContent=error.message;b.disabled=false;}
 });
 document.addEventListener('input',e=>{if(e.target.matches('[data-search]')){S.q=e.target.value.toLowerCase().trim();OS.filterView();}});

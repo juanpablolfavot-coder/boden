@@ -12,7 +12,7 @@ router.get('/',run(async(req,res)=>{
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE cantidad<=minimo)::int bajos FROM repuestos WHERE activo=true"),
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE estado='prestada')::int prestadas,COUNT(*) FILTER(WHERE estado='mantenimiento')::int reparacion FROM herramientas"),
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE fecha>=CURRENT_DATE)::int hoy,COUNT(*) FILTER(WHERE fecha>=CURRENT_DATE-7)::int semana FROM trabajos"),
-    pool.query("SELECT COUNT(*)::int abiertas,COUNT(*) FILTER(WHERE prioridad='urgente')::int urgentes FROM alertas WHERE estado NOT IN ('cerrada','cancelada')"),
+    pool.query("SELECT COUNT(*) FILTER(WHERE estado NOT IN ('cerrada','cancelada'))::int abiertas,COUNT(*) FILTER(WHERE prioridad='urgente' AND estado NOT IN ('cerrada','cancelada'))::int urgentes,COUNT(*) FILTER(WHERE estado='resuelta')::int por_verificar,COUNT(*) FILTER(WHERE vence_at<now() AND estado NOT IN ('cerrada','cancelada'))::int vencidas FROM alertas"),
     pool.query(`SELECT t.id,t.titulo,t.tipo,t.estado,t.fecha,u.nombre AS tecnico,e.nombre AS equipo
       FROM trabajos t JOIN usuarios u ON u.id=t.tecnico_id LEFT JOIN equipos e ON e.id=t.equipo_id ORDER BY t.fecha DESC LIMIT 6`),
     pool.query(`SELECT p.id,p.titulo,p.proxima_fecha,e.nombre AS equipo,e.codigo
