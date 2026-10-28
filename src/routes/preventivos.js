@@ -2,6 +2,7 @@
 const express=require('express');
 const {pool}=require('../db');
 const {auth,requireRole}=require('../auth');
+const {listAnnualPlan,syncAnnualMaintenance}=require('../annual-maintenance');
 const router=express.Router();
 const admin=requireRole('jefe_mantenimiento','admin');
 const run=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
@@ -9,6 +10,10 @@ const id=v=>/^\d+$/.test(String(v||''))&&+v>0?+v:null;
 const str=(v,max=1000)=>String(v??'').trim().slice(0,max);
 const invalid=(res,msg)=>res.status(400).json({error:msg});
 router.use(auth,requireRole('mantenimiento','jefe_mantenimiento','admin'));
+router.get('/anual',run(async(req,res)=>{
+  await syncAnnualMaintenance();
+  res.json(await listAnnualPlan(req.query.anio));
+}));
 router.get('/',run(async(req,res)=>{
   const a=[];let f='WHERE 1=1';
   if(req.query.equipo_id){if(!id(req.query.equipo_id))return invalid(res,'Equipo inválido');a.push(req.query.equipo_id);f+=' AND p.equipo_id=$'+a.length;}
@@ -64,3 +69,4 @@ router.post('/:id/completar',run(async(req,res)=>{
 }));
 router.use((e,req,res,next)=>{console.error('[BODEN preventivos]',e);res.status(e.code==='23503'?400:500).json({error:e.code==='23503'?'Referencia inexistente':'No se pudo procesar el plan preventivo'});});
 module.exports=router;
+

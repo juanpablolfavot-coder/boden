@@ -39,6 +39,31 @@ CREATE TABLE IF NOT EXISTS preventivos (
 );
 CREATE INDEX IF NOT EXISTS idx_preventivos_fecha ON preventivos(proxima_fecha) WHERE activo = true;
 
+-- Plan anual del hotel. Es independiente del inventario: no obliga a inventar
+-- equipos y cada ejecución mensual se controla mediante una alerta operativa.
+CREATE TABLE IF NOT EXISTS mantenimiento_anual (
+  id BIGSERIAL PRIMARY KEY,
+  clave TEXT NOT NULL UNIQUE,
+  titulo TEXT NOT NULL,
+  meses SMALLINT[] NOT NULL,
+  instrucciones TEXT NOT NULL DEFAULT '',
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (cardinality(meses) > 0),
+  CHECK (meses <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12]::SMALLINT[])
+);
+
+CREATE TABLE IF NOT EXISTS mantenimiento_anual_ejecuciones (
+  id BIGSERIAL PRIMARY KEY,
+  plan_id BIGINT NOT NULL REFERENCES mantenimiento_anual(id) ON DELETE CASCADE,
+  anio INTEGER NOT NULL CHECK (anio BETWEEN 2020 AND 2200),
+  mes SMALLINT NOT NULL CHECK (mes BETWEEN 1 AND 12),
+  alerta_id INTEGER REFERENCES alertas(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(plan_id, anio, mes)
+);
+CREATE INDEX IF NOT EXISTS idx_mantenimiento_anual_periodo ON mantenimiento_anual_ejecuciones(anio,mes);
+
 CREATE TABLE IF NOT EXISTS trabajos (
   id BIGSERIAL PRIMARY KEY,
   titulo TEXT NOT NULL,
@@ -115,3 +140,4 @@ CREATE TABLE IF NOT EXISTS prestamos_herramientas (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_prestamo_abierto ON prestamos_herramientas(herramienta_id) WHERE devuelto_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_prestamos_usuario ON prestamos_herramientas(tecnico_id, prestado_at DESC);
+

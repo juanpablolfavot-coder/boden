@@ -160,6 +160,26 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .management-info strong{color:#4a4037;font-weight:500}
 .management-info span{color:#8d8174}
 .management-row{border-color:#efe9e2}
+.annual-panel{margin-bottom:24px;overflow:hidden}
+.annual-scroll{overflow-x:auto;border-top:1px solid #eee7df;border-bottom:1px solid #eee7df}
+.annual-grid{min-width:980px}
+.annual-row{display:grid;grid-template-columns:minmax(265px,1.6fr) repeat(12,minmax(48px,.5fr));min-height:47px;border-bottom:1px solid #f1ece6}
+.annual-row:last-child{border-bottom:0}
+.annual-head{min-height:40px;background:#f7f3ee;color:#847668;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.annual-task{display:flex;align-items:center;padding:10px 16px;border-right:1px solid #eee7df;color:#4a4037;font-size:12px;font-weight:500}
+.annual-cell{display:flex;align-items:center;justify-content:center;border-right:1px solid #f1ece6;color:#8b7e72;font-size:10px}
+.annual-cell.current{background:#f4ede4}
+.annual-open{border:0;background:transparent;padding:5px;cursor:pointer;border-radius:50%}
+.annual-open:hover{background:#e9dfd3}
+.annual-mark{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;font-style:normal;font-size:11px;font-weight:600;background:#ded4c9;color:#6f6256}
+.annual-mark.nueva{background:#f3d7cf;color:#9c4939}
+.annual-mark.asignada,.annual-mark.en_proceso{background:#dbe6ef;color:#41627e}
+.annual-mark.resuelta{background:#eadfbd;color:#7c6421}
+.annual-mark.cerrada{background:#d9e8dc;color:#376543}
+.annual-legend{display:flex;gap:18px;flex-wrap:wrap;padding:12px 16px;color:#817568;font-size:11px}
+.annual-legend span{display:flex;align-items:center;gap:6px}
+.annual-legend .annual-mark{width:18px;height:18px;font-size:9px}
+.preventive-recurring>.overline{margin:6px 0 12px}
 .site-pill .dot{background:#bba48c}
 .preload-mark{font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.02em;background:#302f2e;color:#f9f5ed;border-radius:0}
 .login-layout{grid-template-columns:minmax(0,1.3fr) minmax(410px,1fr);min-height:100vh}
@@ -237,3 +257,4 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
 }
+

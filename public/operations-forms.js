@@ -90,6 +90,11 @@ OS.actions.finishPreventive=async(id)=>{
  textarea('Resultado / observaciones','resultado'));
  modal('Completar preventivo',fields,b=>post('/preventivos/'+id+'/completar',b),'Completar y reprogramar');
 };
+OS.actions.annualTask=async(id)=>{
+ const alert=await get('/alertas/'+id);
+ S.data.alertas=[alert];
+ return OS.actions.alertDetail(id);
+};
 OS.actions.newWorkFor=async(id)=>{OS.close();return OS.actions.newWork(id)};
 OS.actions.newWork=async(preset='')=>{
  const [equipos,alerts]=await Promise.all([listEquip(),get('/alertas')]);
@@ -251,3 +256,4 @@ OS.actions.newWorkForAlert=async(id)=>{
  const form=document.getElementById('dialog-form');if(form?.elements.alerta_id)form.elements.alerta_id.value=id;
 };
 })(window.OS);
+

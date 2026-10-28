@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { ensureSchema } = require('./src/db');
 const { sweepDueNotifications } = require('./src/notifications');
+const { syncAnnualMaintenance } = require('./src/annual-maintenance');
 
 const app = express();
 app.disable('x-powered-by');
@@ -48,7 +49,10 @@ const PORT = process.env.PORT || 3000;
 (async () => {
   try {
     await ensureSchema();
+    await syncAnnualMaintenance();
     app.listen(PORT, '0.0.0.0', () => console.log(`[BODEN] Servidor en http://0.0.0.0:${PORT}`));
+    const annualTimer = setInterval(() => syncAnnualMaintenance().catch((e) => console.error('[BODEN] Plan anual:', e.message)), 6 * 60 * 60 * 1000);
+    annualTimer.unref();
     if (process.env.BODEN_SIMPLE_MIGRATION === '1') {
       sweepDueNotifications().catch((e) => console.error('[BODEN] Vencimientos:', e.message));
       const timer = setInterval(() => sweepDueNotifications().catch((e) => console.error('[BODEN] Vencimientos:', e.message)), 5 * 60 * 1000);
@@ -59,3 +63,4 @@ const PORT = process.env.PORT || 3000;
     process.exit(1);
   }
 })();
+
