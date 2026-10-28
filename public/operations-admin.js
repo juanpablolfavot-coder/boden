@@ -1,6 +1,6 @@
 'use strict';
 (function(OS){
-  const {S,E,I,api,modal,field,textarea,select,opts,pageHead,btn,empty,table,toast,fdate}=OS;
+  const {S,E,I,api,modal,field,textarea,select,opts,pageHead,btn,empty,table,toast,fdate,isManager}=OS;
   const isAdmin=()=>S.user?.rol==='admin';
   const esc=x=>E(x??'');
   const grid=(...fields)=>'<div class="form-grid">'+fields.join('')+'</div>';
@@ -20,6 +20,8 @@
   };
   const wait=(heading)=>{document.getElementById('screen').innerHTML=pageHead(heading,'Configuración centralizada de Böden.')+'<div class="panel">'+empty('Cargando configuración','Recuperando datos del hotel','refresh')+'</div>';};
   const wrapAction=async(fn)=>{if(!isAdmin())throw Error('Solo el administrador puede gestionar este módulo');return fn();};
+  const wrapPeopleAction=async(fn)=>{if(!isManager())throw Error('Solo supervisión puede gestionar el personal');return fn();};
+  const availableRoles=()=>isAdmin()?roles:roles.filter(x=>!['jefe_mantenimiento','admin'].includes(x[0]));
   async function renderPeople(){
     const users=await api('/usuarios');S.data.personal=users;
     const active=users.filter(x=>x.activo).length,tech=users.filter(x=>['mantenimiento','jefe_mantenimiento'].includes(x.rol)&&x.activo).length;
@@ -28,26 +30,26 @@
     '<div class="management-stats"><div><span>Usuarios habilitados</span><strong>'+active+'</strong></div><div><span>Técnicos activos</span><strong>'+tech+'</strong></div><div><span>Roles de acceso</span><strong>6</strong></div></div>'+
     (rows.length?table(['Colaborador','Rol asignado','Acceso','Acciones'],rows):gridPanel('Personal','Aún no hay usuarios','',empty('Sin personal registrado','Agregá usuarios para asignar tareas.','users')));
   }
-  OS.actions.newPerson=()=>wrapAction(async()=>{
+  OS.actions.newPerson=()=>wrapPeopleAction(async()=>{
     modal('Nuevo colaborador',grid(
       field('Nombre completo *','nombre','text','','required minlength="3"'),
       field('Correo de acceso *','email','email','','required'),
-      select('Perfil de acceso','rol',roles,'mantenimiento'),
-      field('Contraseña provisoria *','password','password','','required minlength="12"')
+      select('Perfil de acceso','rol',availableRoles(),'mantenimiento'),
+      field('Contraseña provisoria * · mínimo 12 caracteres','password','password','','required minlength="12" autocomplete="new-password"')
     ),b=>post('/usuarios',b),'Crear usuario');
   });
-  OS.actions.editPerson=(id)=>wrapAction(async()=>{
+  OS.actions.editPerson=(id)=>wrapPeopleAction(async()=>{
     const u=(S.data.personal||[]).find(x=>String(x.id)===String(id));
     if(!u)throw Error('Usuario no encontrado');
     modal('Editar usuario · '+u.nombre,grid(field('Nombre completo','nombre','text',u.nombre,'required minlength="3"'),
-      select('Perfil de acceso','rol',roles,u.rol),
+      select('Perfil de acceso','rol',availableRoles(),u.rol),
       select('Permiso de ingreso','activo',[['true','Habilitado'],['false','Deshabilitado']],String(u.activo))
     ),b=>patch('/usuarios/'+id,{nombre:b.nombre,rol:b.rol,activo:b.activo==='true'}),'Guardar usuario');
   });
-  OS.actions.passwordPerson=(id)=>wrapAction(async()=>{
+  OS.actions.passwordPerson=(id)=>wrapPeopleAction(async()=>{
     const u=(S.data.personal||[]).find(x=>String(x.id)===String(id));
     if(!u)throw Error('Usuario no encontrado');
-    modal('Cambiar clave · '+u.nombre,grid(field('Contraseña nueva','password','password','','required minlength="12"')),
+    modal('Cambiar clave · '+u.nombre,grid(field('Contraseña nueva · mínimo 12 caracteres','password','password','','required minlength="12" autocomplete="new-password"')),
       b=>post('/usuarios/'+id+'/password',{password:b.password}),'Actualizar contraseña');
   });
 
@@ -123,9 +125,11 @@
   const previousLoad=OS.loadPage;
   OS.loadPage=async(page)=>{
     if(['personal','turnos','espacios'].includes(page)){
-      if(!isAdmin())throw Error('No tenés permiso para acceder a administración');
+      if(page==='personal'&&!isManager())throw Error('No tenés permiso para gestionar personal');
+      if(page!=='personal'&&!isAdmin())throw Error('No tenés permiso para acceder a administración');
       return page==='personal'?renderPeople():page==='turnos'?renderShifts():renderSpaces();
     }
     return previousLoad(page);
   };
 })(window.OS);
+

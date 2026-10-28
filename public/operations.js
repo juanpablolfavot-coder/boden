@@ -84,7 +84,7 @@ const items=[
  {id:'preventivos',text:'Preventivos',icon:'calendar',group:'ops'},
  {id:'equipos',text:'Equipos del hotel',icon:'building',group:'assets'},
  {id:'trabajos',text:'Historial técnico',icon:'clipboard',group:'assets'},
- {id:'personal',text:'Personas y roles',icon:'users',group:'admin',admin:true},
+ {id:'personal',text:'Personas y roles',icon:'users',group:'admin',manager:true},
  {id:'espacios',text:'Sectores del hotel',icon:'map',group:'admin',admin:true}
 ];
 const titles=Object.fromEntries(items.map(x=>[x.id,x.text]));
@@ -96,7 +96,7 @@ const groups=[
 ];
 const isAdmin=()=>S.user?.rol==='admin';
 function shell(){
- const visible=items.filter(x=>x.admin?isAdmin():isMaint()||x.id==='alertas');
+ const visible=items.filter(x=>x.admin?isAdmin():x.manager?isManager():isMaint()||x.id==='alertas');
  const sections=groups.map(g=>{
    const entries=visible.filter(x=>x.group===g.id);
    if(!entries.length)return '';
@@ -142,7 +142,8 @@ async function init(){
 }
 async function navigate(page){
  if(!isMaint()&&page!=='alertas')page='alertas';
- if(!isAdmin()&&['personal','turnos','espacios'].includes(page))page='inicio';
+ if(page==='personal'&&!isManager())page='inicio';
+ if(!isAdmin()&&['turnos','espacios'].includes(page))page='inicio';
  if(!titles[page])page=isMaint()?'inicio':'alertas';
  S.page=page;S.q='';S.filter='';S.menu=false;
  const layout=document.getElementById('layout');if(layout)layout.classList.remove('menu-open');
@@ -199,4 +200,5 @@ document.addEventListener('change',e=>{if(e.target.matches('[data-filter]')){S.f
 document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 init();
 })();
+
 
