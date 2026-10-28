@@ -92,7 +92,7 @@ function shell(){
   '<div class="header-start"><button class="menu-btn only-mobile" data-action="menu" aria-label="Abrir menú">'+I('menu')+'</button><div class="crumb"><span class="crumb-context">OPERACIONES DEL HOTEL</span><span class="crumb-sep">/</span><strong id="crumb">'+E(titles[S.page]||'BÖDEN')+'</strong></div></div>'+
   '<div class="top-actions"><button class="notice-btn" data-action="notifications" aria-label="Notificaciones">'+I('bell')+'<span class="notice-count" hidden></span></button><span class="date-chip">'+new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Argentina/Cordoba'})+'</span>'+
   '<span class="head-status"><span class="dot"></span> Sistema operativo</span></div></header>';
- const brand='<div class="brand"><div class="brand-mark"><div class="brand-name">BÖDEN</div><div class="brand-sub">AKEN SOUL <span aria-hidden="true">·</span> OPERACIONES</div></div></div>';
+ const brand='<div class="brand"><div class="brand-mark"><img class="brand-logo" src="/brand/boden-logo.svg" alt="Böden Hotel & Spa · AKEN Soul"><div class="brand-sub">OPERACIONES</div></div></div>';
  const user='<div class="side-foot"><div class="site-pill"><span class="dot"></span><span>GESTIÓN INTERNA · BÖDEN</span></div>'+
   '<div class="user-chip"><div class="avatar">'+E((S.user.nombre||'U').charAt(0).toUpperCase())+'</div><div><strong>'+E(S.user.nombre)+'</strong><small>'+E(S.user.rol.replaceAll('_',' '))+'</small></div>'+
   '<button class="logout" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">'+I('logout')+'</button></div></div>';
@@ -104,7 +104,7 @@ function login(){
  document.getElementById('app').innerHTML=
   '<div class="login-layout">'+
   '<section class="login-visual" aria-label="Böden Hotel & Spa">'+
-  '<div class="brand"><div class="brand-mark"><div class="brand-name">BÖDEN</div><div class="brand-sub">AKEN SOUL · HOTEL & SPA</div></div></div>'+
+  '<div class="brand"><div class="brand-mark"><img class="brand-logo" src="/brand/boden-logo.svg" alt="Böden Hotel & Spa · AKEN Soul"></div></div>'+
   '<div><div class="overline">EXCELENCIA EN CADA DETALLE</div><h1>La hospitalidad también se construye detrás de escena.</h1>'+
   '<p>Un espacio exclusivo para cuidar las instalaciones, coordinar al equipo y mantener cada experiencia a la altura de Böden.</p></div>'+
   '<footer>VILLA GENERAL BELGRANO · CÓRDOBA</footer>'+
