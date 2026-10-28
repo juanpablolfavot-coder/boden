@@ -3,6 +3,7 @@ const express=require('express');
 const {pool}=require('../db');
 const {auth,requireRole}=require('../auth');
 const {listAnnualPlan,syncAnnualMaintenance}=require('../annual-maintenance');
+const {listRecurringPlan,syncRecurringMaintenance}=require('../recurring-maintenance');
 const router=express.Router();
 const admin=requireRole('jefe_mantenimiento','admin');
 const run=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
@@ -13,6 +14,10 @@ router.use(auth,requireRole('mantenimiento','jefe_mantenimiento','admin'));
 router.get('/anual',run(async(req,res)=>{
   await syncAnnualMaintenance();
   res.json(await listAnnualPlan(req.query.anio));
+}));
+router.get('/rutinas',run(async(req,res)=>{
+  await syncRecurringMaintenance();
+  res.json(await listRecurringPlan());
 }));
 router.get('/',run(async(req,res)=>{
   const a=[];let f='WHERE 1=1';

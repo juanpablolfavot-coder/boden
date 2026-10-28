@@ -5,6 +5,18 @@ const {auth,requireRole}=require('../auth');
 const router=express.Router();
 const run=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(next);
 router.use(auth,requireRole('mantenimiento','jefe_mantenimiento','admin'));
+router.get('/verificacion-plan',requireRole('jefe_mantenimiento','admin'),run(async(req,res)=>{
+  const backup=await pool.query('SELECT created_at,motivo,conteos FROM boden_backup_20261028.manifest LIMIT 1');
+  const current=await pool.query(`SELECT
+    (SELECT count(*)::int FROM mantenimiento_anual WHERE activo) AS plan_anual,
+    (SELECT count(*)::int FROM mantenimiento_rutinas WHERE activo) AS rutinas,
+    (SELECT count(*)::int FROM mantenimiento_rutina_ejecuciones) AS ejecuciones_rutinas,
+    (SELECT count(*)::int FROM ubicaciones WHERE tipo='habitacion' AND nombre ~ '^Habitación [1-6]0[1-8]$') AS habitaciones_plan,
+    (SELECT count(*)::int FROM usuarios WHERE activo) AS usuarios_activos,
+    (SELECT count(*)::int FROM notificaciones) AS notificaciones,
+    (SELECT count(*)::int FROM auditoria) AS auditoria`);
+  res.json({backup:backup.rows[0],actual:current.rows[0]});
+}));
 router.get('/',run(async(req,res)=>{
   const q=[
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE estado='fuera_servicio')::int fuera,COUNT(*) FILTER(WHERE estado='mantenimiento')::int reparacion,COUNT(*) FILTER(WHERE criticidad='alta')::int criticos FROM equipos WHERE estado!='baja'"),
@@ -28,3 +40,4 @@ router.get('/',run(async(req,res)=>{
 }));
 router.use((e,req,res,next)=>{console.error('[BODEN centro]',e);res.status(500).json({error:'No se pudo cargar el centro de control'});});
 module.exports=router;
+

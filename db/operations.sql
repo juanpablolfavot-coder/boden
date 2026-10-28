@@ -64,6 +64,31 @@ CREATE TABLE IF NOT EXISTS mantenimiento_anual_ejecuciones (
 );
 CREATE INDEX IF NOT EXISTS idx_mantenimiento_anual_periodo ON mantenimiento_anual_ejecuciones(anio,mes);
 
+-- Rutinas operativas entregadas en el plan preventivo del hotel. Se mantienen
+-- independientes del inventario técnico para no crear marcas, modelos o series
+-- que no fueron informados.
+CREATE TABLE IF NOT EXISTS mantenimiento_rutinas (
+  id BIGSERIAL PRIMARY KEY,
+  clave TEXT NOT NULL UNIQUE,
+  titulo TEXT NOT NULL,
+  frecuencia TEXT NOT NULL CHECK (frecuencia IN ('semanal','mensual')),
+  instrucciones TEXT NOT NULL DEFAULT '',
+  checklist JSONB NOT NULL DEFAULT '[]'::jsonb,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (jsonb_typeof(checklist) = 'array')
+);
+
+CREATE TABLE IF NOT EXISTS mantenimiento_rutina_ejecuciones (
+  id BIGSERIAL PRIMARY KEY,
+  plan_id BIGINT NOT NULL REFERENCES mantenimiento_rutinas(id) ON DELETE CASCADE,
+  periodo DATE NOT NULL,
+  alerta_id INTEGER REFERENCES alertas(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(plan_id, periodo)
+);
+CREATE INDEX IF NOT EXISTS idx_mantenimiento_rutinas_periodo ON mantenimiento_rutina_ejecuciones(periodo);
+
 CREATE TABLE IF NOT EXISTS trabajos (
   id BIGSERIAL PRIMARY KEY,
   titulo TEXT NOT NULL,

@@ -180,6 +180,9 @@ h1{font-size:clamp(27px,2.9vw,37px);font-weight:400;line-height:1.25;letter-spac
 .annual-legend span{display:flex;align-items:center;gap:6px}
 .annual-legend .annual-mark{width:18px;height:18px;font-size:9px}
 .preventive-recurring>.overline{margin:6px 0 12px}
+.routine-panel{margin:18px 0 24px}
+.routine-panel .panel-body{overflow-x:auto}
+.routine-panel table{min-width:680px}
 .site-pill .dot{background:#bba48c}
 .preload-mark{font-family:'Jost',sans-serif;font-weight:300;letter-spacing:.02em;background:#302f2e;color:#f9f5ed;border-radius:0}
 .login-layout{grid-template-columns:minmax(0,1.3fr) minmax(410px,1fr);min-height:100vh}

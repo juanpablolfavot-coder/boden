@@ -30,6 +30,63 @@ async function ensureSchema() {
   await seedIfEmpty();
 }
 
+async function seedHotelRooms() {
+  // Números entregados en la hoja "Check list": 101-108 ... 601-608.
+  // La inserción es idempotente y no altera ubicaciones existentes.
+  let created = 0;
+  for (let floor = 1; floor <= 6; floor++) {
+    for (let room = 1; room <= 8; room++) {
+      const name = `Habitación ${floor * 100 + room}`;
+      const result = await pool.query(
+        `INSERT INTO ubicaciones(tipo,nombre)
+         SELECT 'habitacion',$1
+         WHERE NOT EXISTS (SELECT 1 FROM ubicaciones WHERE lower(nombre)=lower($1))`,
+        [name]
+      );
+      created += result.rowCount;
+    }
+  }
+  if (created) console.log(`[BODEN] Plan preventivo: ${created} habitaciones incorporadas desde la planilla.`);
+}
+
+async function ensurePlanBackup() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('boden-plan-preventivo-20261028'))");
+    await client.query('CREATE SCHEMA IF NOT EXISTS boden_backup_20261028');
+    const existing = await client.query("SELECT to_regclass('boden_backup_20261028.manifest') AS name");
+    if (!existing.rows[0].name) {
+      for (const table of ['usuarios','ubicaciones','alertas','notificaciones','auditoria']) {
+        await client.query(`CREATE TABLE boden_backup_20261028.${table} AS TABLE public.${table} WITH DATA`);
+      }
+      await client.query(`CREATE TABLE boden_backup_20261028.manifest (
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        motivo TEXT NOT NULL,
+        conteos JSONB NOT NULL
+      )`);
+      const counts = await client.query(`SELECT jsonb_build_object(
+        'usuarios',(SELECT count(*) FROM usuarios),
+        'ubicaciones',(SELECT count(*) FROM ubicaciones),
+        'alertas',(SELECT count(*) FROM alertas),
+        'notificaciones',(SELECT count(*) FROM notificaciones),
+        'auditoria',(SELECT count(*) FROM auditoria)
+      ) AS value`);
+      await client.query(
+        'INSERT INTO boden_backup_20261028.manifest(motivo,conteos) VALUES($1,$2)',
+        ['Antes de integrar Plan de mantenimiento preventivo.xlsx', counts.rows[0].value]
+      );
+      console.log('[BODEN] Respaldo previo creado en boden_backup_20261028.');
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function seedIfEmpty() {
   const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM usuarios');
   if (rows[0].n > 0) return;
@@ -69,4 +126,5 @@ async function seedIfEmpty() {
   console.log('[BODEN] Cuenta de administrador creada (credenciales configuradas de forma privada).');
 }
 
-module.exports = { pool, query, ensureSchema };
+module.exports = { pool, query, ensureSchema, seedHotelRooms, ensurePlanBackup };
+

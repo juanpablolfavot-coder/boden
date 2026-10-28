@@ -28,6 +28,18 @@ function annualCalendar(data){
   }).join('')+'</div>').join('');
  return '<section class="panel annual-panel"><div class="panel-head"><div><h3>Plan anual '+E(data.year)+'</h3><p>Las tareas del mes se crean automáticamente para asignación, evidencia y aprobación.</p></div><span class="badge gray">'+plans.length+' actividades</span></div><div class="annual-scroll"><div class="annual-grid"><div class="annual-row annual-head"><div class="annual-task">Actividad</div>'+months.map((month,index)=>'<div class="annual-cell'+(index+1===currentMonth?' current':'')+'">'+E(month.slice(0,3))+'</div>').join('')+'</div>'+rows+'</div></div><div class="annual-legend"><span><i class="annual-mark scheduled">•</i> Programado</span><span><i class="annual-mark nueva">!</i> Tarea abierta</span><span><i class="annual-mark resuelta">R</i> En revisión</span><span><i class="annual-mark cerrada">✓</i> Aprobado</span></div></section>';
 }
+function recurringPanel(data){
+ const plans=data?.plans||[];
+ if(!plans.length)return '';
+ const rows=plans.map(plan=>{
+   const state=plan.estado||'programada';
+   const frequency=plan.frecuencia==='semanal'?'Semanal':'Mensual';
+   const checklist=Array.isArray(plan.checklist)&&plan.checklist.length?'<small>'+plan.checklist.length+' controles del generador</small>':'';
+   const task=plan.alerta_id?'<button class="btn-text" data-action="annualTask" data-id="'+E(plan.alerta_id)+'">Abrir tarea '+I('arrow')+'</button>':'<span class="muted small">Pendiente de crear</span>';
+   return '<tr><td><span class="cell-title">'+E(plan.titulo)+'</span>'+checklist+'</td><td>'+E(frequency)+'</td><td>'+badge(state)+'</td><td>'+task+'</td></tr>';
+ }).join('');
+ return '<section class="panel routine-panel"><div class="panel-head"><div><h3>Rutinas del hotel</h3><p>Programación entregada en la planilla: una tarea semanal y siete mensuales.</p></div><span class="badge gray">'+plans.length+' rutinas</span></div><div class="panel-body">'+table(['Actividad','Frecuencia','Período actual',''],rows)+'</div></section>';
+}
 const upcoming=(records,kind)=>records?.length?records.map(x=>'<div class="alert-line"><div class="iconbox">'+I(kind==='p'?'calendar':'box')+'</div><div><strong>'+E(kind==='p'?x.titulo:x.nombre)+'</strong><small>'+E(kind==='p'?x.equipo:x.unidad)+'</small></div><div class="right">'+E(kind==='p'?fdate(x.proxima_fecha):number(x.cantidad)+' / '+number(x.minimo))+'</div></div>').join(''):empty(kind==='p'?'Agenda al día':'Sin mínimos comprometidos',kind==='p'?'No hay mantenimientos pendientes en los próximos 14 días.':'No hay repuestos por debajo del mínimo.',kind==='p'?'calendar':'check');
 function renderHome(d){
  const total=Number(d.equipos?.total||0),off=Number(d.equipos?.fuera||0),maintenance=Number(d.equipos?.reparacion||0),online=Math.max(0,total-off-maintenance),health=total?Math.round(online/total*100):null;
@@ -63,7 +75,7 @@ function results(){
   const rows=(data||[]).filter(x=>!S.filter || (S.filter==='activo' ? x.activo:!x.activo)).filter(x=>!S.q||[x.titulo,x.equipo,x.equipo_codigo].some(y=>String(y||'').toLowerCase().includes(S.q)))
    .map(x=>'<tr><td><span class="cell-title">'+E(x.titulo)+'</span>'+muted(x.instrucciones?.slice(0,85))+'</td><td><span class="cell-title">'+E(x.equipo)+'</span><span class="mono">'+E(x.equipo_codigo)+'</span></td><td>'+number(x.frecuencia_dias)+' días</td><td><span class="cell-title '+(x.activo&&dateField(x.proxima_fecha)<today?'red-text':'')+'">'+E(fdate(x.proxima_fecha))+'</span>'+ (x.activo&&dateField(x.proxima_fecha)<today?'<span class="badge red">Vencido</span>':'')+'</td><td>'+ (x.activo?badge('operativo'):badge('baja'))+'</td><td><div class="row-actions">'+(x.activo?action('Completar','finishPreventive',x.id,'btn-primary'):'')+(isManager()?action('Editar','editPreventive',x.id):'')+'</div></td></tr>');
   const recurring=rows.length?table(['Tarea','Equipo','Periodicidad','Próxima fecha','Plan',''],rows):empty('Sin planes por equipo','Podés sumar revisiones periódicas vinculadas al inventario técnico.','calendar',isManager()?btn('Crear preventivo','newPreventive'):'');
-  return annualCalendar(S.data.planAnual)+('<div class="preventive-recurring"><div class="overline">PLANES VINCULADOS A EQUIPOS</div>'+recurring+'</div>');
+  return annualCalendar(S.data.planAnual)+recurringPanel(S.data.planRutinas)+('<div class="preventive-recurring"><div class="overline">PLANES VINCULADOS A EQUIPOS</div>'+recurring+'</div>');
  }
  if(S.page==='stock'){
   const rows=(data||[]).filter(x=>!S.q||['nombre','sku','categoria','ubicacion'].some(k=>String(x[k]||'').toLowerCase().includes(S.q))).filter(x=>!S.filter||(S.filter==='bajo'?Number(x.cantidad)<=Number(x.minimo):Number(x.cantidad)>Number(x.minimo))).map(x=>'<tr><td><span class="cell-title">'+E(x.nombre)+'</span><span class="mono">'+E(x.sku||'SIN SKU')+'</span></td><td>'+E(x.categoria)+'</td><td><strong class="'+(Number(x.cantidad)<=Number(x.minimo)?'red-text':'')+'">'+number(x.cantidad)+' '+E(x.unidad)+'</strong></td><td>'+number(x.minimo)+'</td><td>'+E(x.ubicacion||'—')+'</td><td>'+(Number(x.cantidad)<=Number(x.minimo)?'<span class="badge red">Reponer</span>':'<span class="badge green">Disponible</span>')+'</td><td><div class="row-actions">'+action('Movimiento','stockMove',x.id,'btn-primary')+(isManager()?action('Editar','editStock',x.id):'')+'</div></td></tr>');
@@ -100,8 +112,8 @@ OS.filterView=()=>showResults(results());
 OS.loadPage=async(page)=>{
  if(page==='inicio'){const d=await api('/centro');S.data.inicio=d;return renderHome(d);}
  if(page==='preventivos'){
-  const [records,annual]=await Promise.all([api('/preventivos'),api('/preventivos/anual')]);
-  S.data.planAnual=annual;return renderList(page,records);
+  const [records,annual,routines]=await Promise.all([api('/preventivos'),api('/preventivos/anual'),api('/preventivos/rutinas')]);
+  S.data.planAnual=annual;S.data.planRutinas=routines;return renderList(page,records);
  }
  const route={alertas:'/alertas',trabajos:'/trabajos',equipos:'/equipos',preventivos:'/preventivos',stock:'/stock',herramientas:'/herramientas'}[page];
  if(!route)throw Error('Sección no disponible');
