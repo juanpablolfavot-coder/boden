@@ -46,7 +46,6 @@ async function syncRecurringMaintenance() {
 
   for (const plan of plans.rows) {
     const period = plan.frecuencia === 'semanal' ? periods.semana : periods.mes;
-    const dueExpression = plan.frecuencia === 'semanal' ? "$2::date + interval '7 days'" : "$2::date + interval '1 month'";
     const checklist = Array.isArray(plan.checklist) ? plan.checklist : [];
     const client = await pool.connect();
     let alert;
@@ -64,9 +63,11 @@ async function syncRecurringMaintenance() {
       const description = `Rutina ${plan.frecuencia} Böden · período ${period}. Asignar responsable, completar el trabajo y adjuntar evidencia.${checklistText(checklist)}`;
       const created = await client.query(
         `INSERT INTO alertas(numero,titulo,descripcion,prioridad,estado,vence_at)
-         VALUES(nextval('alerta_numero_seq'),$1,$3,'media','nueva',(${dueExpression} AT TIME ZONE $4))
+         VALUES(nextval('alerta_numero_seq'),$1,$3,'media','nueva',
+           ((CASE WHEN $5='semanal' THEN $2::date + 7
+                  ELSE ($2::date + interval '1 month')::date END)::timestamp AT TIME ZONE $4))
          RETURNING id,numero,titulo`,
-        [plan.titulo, period, description, TZ]
+        [plan.titulo, period, description, TZ, plan.frecuencia]
       );
       alert = created.rows[0];
       await client.query('UPDATE mantenimiento_rutina_ejecuciones SET alerta_id=$1 WHERE id=$2', [alert.id, occurrence.rows[0].id]);
