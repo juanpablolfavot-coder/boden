@@ -60,6 +60,22 @@ function toast(msg,error=false){
 async function refreshNotifications(){
  try{S.notifications=await api('/notificaciones');const n=S.notifications.filter(x=>!x.leida_at).length;const el=document.querySelector('.notice-count');if(el){el.textContent=n;el.hidden=!n;}}catch{}
 }
+const pushAvailable=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+const vapidBytes=(key)=>{const p='='.repeat((4-key.length%4)%4),raw=atob((key+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));};
+async function enablePush(){
+ if(!pushAvailable())throw Error('Este dispositivo no admite notificaciones push');
+ const {publicKey}=await api('/push/vapid-public');
+ if(!publicKey)throw Error('Las notificaciones push todavía no están disponibles');
+ const permission=await Notification.requestPermission();
+ if(permission!=='granted')throw Error('El dispositivo no autorizó las notificaciones');
+ const registration=await navigator.serviceWorker.register('/sw.js');
+ await navigator.serviceWorker.ready;
+ let subscription=await registration.pushManager.getSubscription();
+ if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(publicKey)});
+ await api('/push/subscribe',{method:'POST',body:JSON.stringify(subscription.toJSON())});
+ localStorage.setItem('boden_push_enabled','1');
+ return true;
+}
 const isManager=()=>['admin','jefe_mantenimiento'].includes(S.user?.rol);
 const isMaint=()=>['admin','jefe_mantenimiento','mantenimiento'].includes(S.user?.rol);
 const items=[
@@ -159,7 +175,8 @@ const pageHead=(title,subtitle,action='')=>'<div class="page-head"><div><div cla
 const btn=(text,action,id='',style='btn-primary')=>'<button class="btn '+style+'" data-action="'+E(action)+'" '+(id!==''?'data-id="'+E(id)+'"':'')+'>'+E(text)+'</button>';
 const table=(columns,rows)=>'<div class="panel table-wrap"><table class="data-table"><thead><tr>'+columns.map(x=>'<th>'+E(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
 const OS=window.OS={S,I,E,fdate,dateField,number,status,badge,api,toast,isManager,isMaint,login,init,navigate,logout,modal,close,field,textarea,select,opts,empty,pageHead,btn,table,actions:{},loadPage:async()=>{},filterView:()=>{}};
-OS.actions.notifications=async()=>{await refreshNotifications();const rows=S.notifications.length?S.notifications.map(x=>'<div class="activity"><div class="activity-symbol">'+I('bell')+'</div><div class="activity-main"><strong>'+E(x.titulo)+'</strong><small>'+E(x.cuerpo)+' · '+E(fdate(x.created_at,true))+'</small></div></div>').join(''):empty('Sin novedades','No tenés notificaciones pendientes.','check');modal('Notificaciones',rows,null);await Promise.all(S.notifications.filter(x=>!x.leida_at).map(x=>api('/notificaciones/'+x.id+'/leida',{method:'PATCH'}).catch(()=>null)));await refreshNotifications();};
+OS.actions.notifications=async()=>{await refreshNotifications();const rows=S.notifications.length?S.notifications.map(x=>'<div class="activity"><div class="activity-symbol">'+I('bell')+'</div><div class="activity-main"><strong>'+E(x.titulo)+'</strong><small>'+E(x.cuerpo)+' · '+E(fdate(x.created_at,true))+'</small></div></div>').join(''):empty('Sin novedades','No tenés notificaciones pendientes.','check');const enabled=pushAvailable()&&Notification.permission==='granted'&&localStorage.getItem('boden_push_enabled')==='1';const push=pushAvailable()?'<div class="row-actions" style="margin-top:18px">'+(enabled?'<span class="badge green">Avisos del dispositivo activos</span>':'<button class="btn btn-soft" data-action="enablePush">Activar avisos en este dispositivo</button>')+'</div>':'';modal('Notificaciones',rows+push,null);await Promise.all(S.notifications.filter(x=>!x.leida_at).map(x=>api('/notificaciones/'+x.id+'/leida',{method:'PATCH'}).catch(()=>null)));await refreshNotifications();};
+OS.actions.enablePush=async()=>{await enablePush();close();toast('Notificaciones activadas en este dispositivo');};
 document.addEventListener('click',async(e)=>{
  const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return;}
  const act=e.target.closest('[data-action]');if(!act)return;
@@ -182,3 +199,4 @@ document.addEventListener('change',e=>{if(e.target.matches('[data-filter]')){S.f
 document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
 init();
 })();
+
