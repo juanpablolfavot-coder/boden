@@ -37,7 +37,7 @@ function recurringPanel(data){
    const checklist=Array.isArray(plan.checklist)&&plan.checklist.length?'<small>'+plan.checklist.length+' controles del generador</small>':'';
    const task=plan.alerta_id?'<button class="btn-text" data-action="annualTask" data-id="'+E(plan.alerta_id)+'">Abrir tarea '+I('arrow')+'</button>':'<span class="muted small">Pendiente de crear</span>';
    return '<tr><td><span class="cell-title">'+E(plan.titulo)+'</span>'+checklist+'</td><td>'+E(frequency)+'</td><td>'+badge(state)+'</td><td>'+task+'</td></tr>';
- }).join('');
+ });
  return '<section class="panel routine-panel"><div class="panel-head"><div><h3>Rutinas del hotel</h3><p>Programación entregada en la planilla: una tarea semanal y siete mensuales.</p></div><span class="badge gray">'+plans.length+' rutinas</span></div><div class="panel-body">'+table(['Actividad','Frecuencia','Período actual',''],rows)+'</div></section>';
 }
 const upcoming=(records,kind)=>records?.length?records.map(x=>'<div class="alert-line"><div class="iconbox">'+I(kind==='p'?'calendar':'box')+'</div><div><strong>'+E(kind==='p'?x.titulo:x.nombre)+'</strong><small>'+E(kind==='p'?x.equipo:x.unidad)+'</small></div><div class="right">'+E(kind==='p'?fdate(x.proxima_fecha):number(x.cantidad)+' / '+number(x.minimo))+'</div></div>').join(''):empty(kind==='p'?'Agenda al día':'Sin mínimos comprometidos',kind==='p'?'No hay mantenimientos pendientes en los próximos 14 días.':'No hay repuestos por debajo del mínimo.',kind==='p'?'calendar':'check');
