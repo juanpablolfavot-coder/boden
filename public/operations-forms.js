@@ -83,12 +83,19 @@ OS.actions.editPreventive=async(id)=>{
 };
 OS.actions.finishPreventive=async(id)=>{
  const p=arr(S.data.preventivos).find(x=>String(x.id)===String(id));if(!p)throw Error('Plan inexistente');
- const fields='<p class="muted small">Se generará un parte de trabajo y se reprogramará automáticamente la próxima ejecución.</p>'+
+ const fields='<p class="muted small">Se generará un parte y se enviará a supervisión. La próxima fecha se reprogramará cuando el gerente apruebe el cierre.</p>'+
  grid(field('Tarea realizada','titulo','text',p.titulo,'required minlength="3"'),
  field('Duración total (minutos)','duracion_min','number','30','min="0" required'),
  textarea('Descripción de la intervención','descripcion',p.instrucciones||''),
- textarea('Resultado / observaciones','resultado'));
- modal('Completar preventivo',fields,b=>post('/preventivos/'+id+'/completar',b),'Completar y reprogramar');
+ '<div class="field span2"><label>Resultado / observaciones *</label><textarea name="resultado" rows="3" required minlength="5"></textarea></div>',
+ '<div class="field span2"><label>Fotografía de evidencia *</label><input type="file" name="archivo_foto" accept="image/*" capture="environment" required></div>');
+ modal('Completar preventivo',fields,async(b,form)=>{
+  const file=form.querySelector('input[name="archivo_foto"]')?.files?.[0];
+  if(!file||!file.type.startsWith('image/'))throw Error('Adjuntá una fotografía de evidencia');
+  if(file.size>2500000)throw Error('La fotografía supera 2,5 MB');
+  const foto=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(Error('No se pudo leer la fotografía'));r.readAsDataURL(file);});
+  return post('/preventivos/'+id+'/completar',{...b,foto});
+ },'Enviar a supervisión');
 };
 OS.actions.annualTask=async(id)=>{
  const alert=await get('/alertas/'+id);
@@ -219,15 +226,21 @@ OS.actions.newAlert=async()=>{
 };
 OS.actions.alertTake=async(id)=>{await patch('/alertas/'+id+'/tomar',{});toast('Alerta tomada correctamente');await OS.navigate('alertas');};
 OS.actions.alertDetail=async(id)=>{
- const a=arr(S.data.alertas).find(x=>String(x.id)===String(id));if(!a)throw Error('Alerta no encontrada');
+ const [a,history]=await Promise.all([get('/alertas/'+id),get('/alertas/'+id+'/historial')]);
+ if(!a)throw Error('Alerta no encontrada');
+ const evidence=arr(a.adjuntos).filter(x=>String(x.url||'').startsWith('data:image/'));
+ const evidenceHtml='<div class="overline" style="margin:24px 0 10px">EVIDENCIA</div>'+
+  (evidence.length?'<div class="evidence-grid">'+evidence.map(x=>'<figure><img src="'+E(x.url)+'" alt="Evidencia '+E(status(x.tipo))+'"><figcaption>'+E(status(x.tipo))+' · '+E(fdate(x.created_at,true))+'</figcaption></figure>').join('')+'</div>':'<p class="muted small">Todavía no se adjuntaron fotografías.</p>');
+ const historyHtml='<div class="overline" style="margin:24px 0 10px">TRAZABILIDAD</div>'+
+  (arr(history).length?'<div class="timeline">'+history.map(x=>'<div class="timeline-item"><strong>'+E(x.evento)+'</strong><small>'+E(x.usuario_nombre||'Sistema')+' · '+E(fdate(x.created_at,true))+'</small>'+(x.nota?'<p>'+E(x.nota)+'</p>':'')+'</div>').join('')+'</div>':'<p class="muted small">Sin movimientos registrados.</p>');
  const detailsHtml='<div class="detail-grid">'+[
  ['Código',a.codigo],['Estado',status(a.estado)],['Prioridad',status(a.prioridad)],['Ubicación',a.ubicacion],
  ['Reportó',a.reportado_nombre],['Responsable',a.asignado_nombre],['Fecha de creación',fdate(a.created_at,true)]
- ].map(details).join('')+'</div><div class="detail-desc">'+escape(a.descripcion)+'</div><div class="row-actions" style="margin-top:24px">'+
+ ].map(details).join('')+'</div><div class="detail-desc">'+escape(a.descripcion)+'</div>'+evidenceHtml+historyHtml+'<div class="row-actions" style="margin-top:24px">'+
  (isMaint()&&a.estado==='nueva'?'<button class="btn btn-primary" data-action="alertTake" data-id="'+id+'">Tomar alerta</button>':'')+
- (isMaint()&&['nueva','asignada'].includes(a.estado)?'<button class="btn btn-primary" data-action="alertStart" data-id="'+id+'">Iniciar trabajo</button>':'')+
- (isMaint()&&['en_proceso','asignada'].includes(a.estado)?'<button class="btn btn-primary" data-action="alertResolve" data-id="'+id+'">Marcar resuelta</button>':'')+
- (isManager()&&a.estado==='resuelta'?'<button class="btn btn-primary" data-action="alertClose" data-id="'+id+'">Cerrar y verificar</button>':'')+
+ (isMaint()&&a.estado==='asignada'?'<button class="btn btn-primary" data-action="alertStart" data-id="'+id+'">Iniciar trabajo</button>':'')+
+ (isMaint()&&a.estado==='en_proceso'?'<button class="btn btn-primary" data-action="alertResolve" data-id="'+id+'">Marcar resuelta</button>':'')+
+ (isManager()&&a.estado==='resuelta'?'<button class="btn btn-primary" data-action="alertClose" data-id="'+id+'">Aprobar cierre</button><button class="btn btn-soft" data-action="alertReject" data-id="'+id+'">Rechazar y devolver</button>':'')+
  (isMaint()&&['resuelta','cerrada'].includes(a.estado)?'<button class="btn btn-soft" data-action="alertReopen" data-id="'+id+'">Reabrir</button>':'')+
  (isMaint()?'<button class="btn btn-soft" data-action="newWorkForAlert" data-id="'+id+'">Registrar intervención</button>':'')+'</div>';
  modal(a.codigo+' · '+a.titulo,detailsHtml,null);

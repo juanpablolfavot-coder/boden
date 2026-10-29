@@ -2,6 +2,8 @@
 const express=require('express');
 const {pool}=require('../db');
 const {auth,requireRole}=require('../auth');
+const {notify,audit}=require('../notifications');
+const {validatePreventiveCompletion}=require('../preventive-policy');
 const {listAnnualPlan,syncAnnualMaintenance}=require('../annual-maintenance');
 const {listRecurringPlan,syncRecurringMaintenance}=require('../recurring-maintenance');
 const router=express.Router();
@@ -52,25 +54,43 @@ router.patch('/:id',admin,run(async(req,res)=>{
   if(!r.rows.length)return res.status(404).json({error:'Plan no encontrado'});
   res.json(r.rows[0]);
 }));
-// Completar registra una intervención auditable, actualiza fecha y evita doble ejecución simultánea.
+// Completar registra evidencia y envía la ejecución a supervisión. El plan se
+// reprograma únicamente cuando el gerente aprueba el cierre de la alerta.
 router.post('/:id/completar',run(async(req,res)=>{
   if(!id(req.params.id))return invalid(res,'Plan inválido');
   const b=req.body||{},minutes=Number(b.duracion_min??0);
   if(!Number.isInteger(minutes)||minutes<0||minutes>14400)return invalid(res,'Duración inválida');
+  const evidence=validatePreventiveCompletion(b);
+  if(!evidence.ok)return invalid(res,evidence.error);
   const client=await pool.connect();
+  let payload;
   try{
     await client.query('BEGIN');
     const q=await client.query('SELECT * FROM preventivos WHERE id=$1 FOR UPDATE',[req.params.id]);
     const p=q.rows[0];
     if(!p||!p.activo){await client.query('ROLLBACK');return res.status(404).json({error:'Plan no disponible'});}
+    const pending=await client.query("SELECT id FROM alertas WHERE preventivo_id=$1 AND estado NOT IN ('cerrada','cancelada') LIMIT 1",[p.id]);
+    if(pending.rows[0]){await client.query('ROLLBACK');return res.status(409).json({error:'Este preventivo ya está esperando revisión de supervisión'});}
     const title=str(b.titulo||p.titulo,180);
+    const alert=await client.query(`INSERT INTO alertas(
+       numero,titulo,descripcion,equipo_id,preventivo_id,prioridad,estado,reportado_por,asignado_a,resuelta_at,vence_at)
+       VALUES(nextval('alerta_numero_seq'),$1,$2,$3,$4,'media','resuelta',$5,$5,now(),
+         ($6::date::timestamp AT TIME ZONE 'America/Argentina/Cordoba'))
+       RETURNING id,numero,titulo,estado`,
+      [title,str(b.resultado,3000),p.equipo_id,p.id,req.user.id,p.proxima_fecha]);
     const trabajo=await client.query(`INSERT INTO trabajos(titulo,descripcion,tipo,estado,equipo_id,preventivo_id,tecnico_id,duracion_min,resultado)
        VALUES($1,$2,'preventivo','realizado',$3,$4,$5,$6,$7) RETURNING *`,
        [title,str(b.descripcion||p.instrucciones,4000),p.equipo_id,p.id,req.user.id,minutes,str(b.resultado,3000)]);
-    const plan=await client.query(`UPDATE preventivos SET ultimo_realizado=now(),proxima_fecha=(CURRENT_DATE+$1::int) WHERE id=$2 RETURNING *`,[p.frecuencia_dias,p.id]);
+    await client.query('UPDATE trabajos SET alerta_id=$1 WHERE id=$2',[alert.rows[0].id,trabajo.rows[0].id]);
+    await client.query("INSERT INTO adjuntos(alerta_id,url,tipo) VALUES($1,$2,'solucion')",[alert.rows[0].id,b.foto]);
+    await client.query("INSERT INTO alerta_historial(alerta_id,evento,usuario_id,nota) VALUES($1,'Preventivo enviado a verificación',$2,$3)",[alert.rows[0].id,req.user.id,str(b.resultado,3000)]);
+    await audit(client,'preventivo',p.id,'enviado_a_verificacion',req.user.id,{alerta_id:alert.rows[0].id,trabajo_id:trabajo.rows[0].id});
     await client.query('COMMIT');
-    res.status(201).json({trabajo:trabajo.rows[0],preventivo:plan.rows[0]});
+    payload={trabajo:{...trabajo.rows[0],alerta_id:alert.rows[0].id},preventivo:p,alerta:alert.rows[0]};
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  const managers=await pool.query("SELECT id FROM usuarios WHERE activo AND rol IN ('jefe_mantenimiento','admin')");
+  await notify(managers.rows.map(x=>x.id),{key:`preventivo-revision-${payload.alerta.id}`,title:'Preventivo listo para verificar',body:payload.alerta.titulo,url:`/?alerta=${payload.alerta.id}`});
+  res.status(201).json(payload);
 }));
 router.use((e,req,res,next)=>{console.error('[BODEN preventivos]',e);res.status(e.code==='23503'?400:500).json({error:e.code==='23503'?'Referencia inexistente':'No se pudo procesar el plan preventivo'});});
 module.exports=router;

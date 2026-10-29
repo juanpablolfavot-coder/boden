@@ -19,6 +19,9 @@ async function query(text, params) {
 async function ensureSchema() {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'db', 'schema.sql'), 'utf8');
   await pool.query(sql);
+  // En una instalación existente, preservar el estado previo antes de sumar
+  // la revisión gerencial de preventivos por equipo.
+  await ensureWorkflowBackup();
   // Módulos CMMS v2: migraciones aditivas sin eliminar tablas ni registros.
   const operationsSql = fs.readFileSync(path.join(__dirname, '..', 'db', 'operations.sql'), 'utf8');
   await pool.query(operationsSql);
@@ -28,6 +31,54 @@ async function ensureSchema() {
     await pool.query(simpleSql);
   }
   await seedIfEmpty();
+}
+
+async function ensureWorkflowBackup() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('boden-preventivos-supervision-20261029'))");
+    const ready = await client.query(`SELECT
+      to_regclass('public.preventivos') AS preventivos,
+      to_regclass('public.trabajos') AS trabajos,
+      to_regclass('public.auditoria') AS auditoria`);
+    if (!ready.rows[0].preventivos || !ready.rows[0].trabajos) {
+      await client.query('COMMIT');
+      return;
+    }
+    await client.query('CREATE SCHEMA IF NOT EXISTS boden_backup_20261029');
+    const existing = await client.query("SELECT to_regclass('boden_backup_20261029.manifest') AS name");
+    if (!existing.rows[0].name) {
+      for (const table of ['alertas','preventivos','trabajos','adjuntos']) {
+        await client.query(`CREATE TABLE boden_backup_20261029.${table} AS TABLE public.${table} WITH DATA`);
+      }
+      if (ready.rows[0].auditoria) {
+        await client.query('CREATE TABLE boden_backup_20261029.auditoria AS TABLE public.auditoria WITH DATA');
+      }
+      await client.query(`CREATE TABLE boden_backup_20261029.manifest (
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        motivo TEXT NOT NULL,
+        conteos JSONB NOT NULL
+      )`);
+      const counts = await client.query(`SELECT jsonb_build_object(
+        'alertas',(SELECT count(*) FROM alertas),
+        'preventivos',(SELECT count(*) FROM preventivos),
+        'trabajos',(SELECT count(*) FROM trabajos),
+        'adjuntos',(SELECT count(*) FROM adjuntos)
+      ) AS value`);
+      await client.query(
+        'INSERT INTO boden_backup_20261029.manifest(motivo,conteos) VALUES($1,$2)',
+        ['Antes de exigir evidencia y aprobación gerencial en preventivos por equipo', counts.rows[0].value]
+      );
+      console.log('[BODEN] Respaldo previo creado en boden_backup_20261029.');
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function seedHotelRooms() {
@@ -126,5 +177,5 @@ async function seedIfEmpty() {
   console.log('[BODEN] Cuenta de administrador creada (credenciales configuradas de forma privada).');
 }
 
-module.exports = { pool, query, ensureSchema, seedHotelRooms, ensurePlanBackup };
+module.exports = { pool, query, ensureSchema, seedHotelRooms, ensurePlanBackup, ensureWorkflowBackup };
 

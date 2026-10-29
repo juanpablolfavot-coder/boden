@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS preventivos (
 );
 CREATE INDEX IF NOT EXISTS idx_preventivos_fecha ON preventivos(proxima_fecha) WHERE activo = true;
 
+-- Cada ejecución de un preventivo por equipo se presenta como tarea resuelta
+-- para que supervisión pueda aprobarla o rechazarla antes de reprogramar.
+ALTER TABLE alertas ADD COLUMN IF NOT EXISTS preventivo_id BIGINT REFERENCES preventivos(id);
+CREATE INDEX IF NOT EXISTS idx_alertas_preventivo_abierto ON alertas(preventivo_id)
+  WHERE preventivo_id IS NOT NULL AND estado NOT IN ('cerrada','cancelada');
+
 -- Plan anual del hotel. Es independiente del inventario: no obliga a inventar
 -- equipos y cada ejecución mensual se controla mediante una alerta operativa.
 CREATE TABLE IF NOT EXISTS mantenimiento_anual (

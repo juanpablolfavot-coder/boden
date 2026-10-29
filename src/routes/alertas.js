@@ -30,8 +30,8 @@ const SELECT_ALERTA = `
   LEFT JOIN usuarios uv   ON uv.id = a.verificada_por
 `;
 
-async function registrarHistorial(alertaId, evento, usuarioId, nota) {
-  await pool.query(
+async function registrarHistorial(alertaId, evento, usuarioId, nota, client = pool) {
+  await client.query(
     'INSERT INTO alerta_historial (alerta_id, evento, usuario_id, nota) VALUES ($1,$2,$3,$4)',
     [alertaId, evento, usuarioId, nota || null]
   );
@@ -203,11 +203,27 @@ router.patch('/:id/estado', auth, requireRole('mantenimiento', 'jefe_mantenimien
   const t = transiciones[action];
 
   const params=[alerta.id];if(['aprobar','rechazar'].includes(action))params.push(nota||null);
-  await pool.query(`UPDATE alertas SET ${t.set} WHERE id = $1`, params);
-  await registrarHistorial(alerta.id, t.ev, req.user.id, nota || null);
-  await audit(pool,'alerta',alerta.id,action,req.user.id,{nota:nota||null});
-  if (estado === 'resuelta' && foto && typeof foto === 'string' && foto.startsWith('data:image')) {
-    await pool.query('INSERT INTO adjuntos (alerta_id, url, tipo) VALUES ($1,$2,$3)', [alerta.id, foto, 'solucion']);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`UPDATE alertas SET ${t.set} WHERE id = $1`, params);
+    await registrarHistorial(alerta.id, t.ev, req.user.id, nota || null, client);
+    await audit(client,'alerta',alerta.id,action,req.user.id,{nota:nota||null});
+    if (estado === 'resuelta' && foto && typeof foto === 'string' && foto.startsWith('data:image')) {
+      await client.query('INSERT INTO adjuntos (alerta_id, url, tipo) VALUES ($1,$2,$3)', [alerta.id, foto, 'solucion']);
+    }
+    if (action === 'aprobar' && alerta.preventivo_id) {
+      await client.query(`UPDATE preventivos
+        SET ultimo_realizado=now(),proxima_fecha=(CURRENT_DATE+frecuencia_dias)
+        WHERE id=$1`,[alerta.preventivo_id]);
+      await audit(client,'preventivo',alerta.preventivo_id,'aprobado_y_reprogramado',req.user.id,{alerta_id:alerta.id});
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
   if (action === 'rechazar') {
     await notify([Number(alerta.asignado_a)], { key:`alerta-rechazada-${alerta.id}-${Date.now()}`, title: 'Trabajo rechazado por supervisión', body: `${alerta.codigo} · ${nota}`, url: '/' });
@@ -219,3 +235,4 @@ router.patch('/:id/estado', auth, requireRole('mantenimiento', 'jefe_mantenimien
 });
 
 module.exports = router;
+
