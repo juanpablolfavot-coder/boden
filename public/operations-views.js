@@ -86,7 +86,7 @@ function results(){
   return rows.length?table(['Herramienta','Categoría','Condición','Estado','Responsable / Lugar',''],rows):empty('Sin herramientas cargadas','Controlá cada herramienta y a qué técnico se le entregó.','tool',isManager()?btn('Registrar herramienta','newTool'):'');
  }
  if(S.page==='alertas'){
-  const rows=filtered(data,['titulo','descripcion','codigo','ubicacion','asignado_nombre','reportado_nombre']).map(x=>'<tr><td><span class="mono">'+E(x.codigo)+'</span><span class="cell-title">'+E(x.titulo)+'</span>'+muted(x.descripcion?.slice(0,70))+'</td><td>'+E(x.ubicacion||'—')+'</td><td>'+badge(x.prioridad)+'</td><td>'+badge(x.estado)+'</td><td>'+E(x.asignado_nombre||'Sin asignar')+'</td><td>'+E(fdate(x.created_at,true))+'</td><td><div class="row-actions">'+action('Ver','alertDetail',x.id)+(isMaint()&&x.estado==='nueva'?action('Tomar','alertTake',x.id,'btn-primary'):'')+'</div></td></tr>');
+  const rows=filtered(data,['titulo','descripcion','codigo','ubicacion','asignado_nombre','reportado_nombre']).map(x=>'<tr><td><span class="mono">'+E(x.codigo)+'</span><span class="cell-title">'+E(x.titulo)+'</span>'+muted(OS.humanText(x.descripcion).slice(0,70))+'</td><td>'+E(x.ubicacion||'—')+'</td><td>'+badge(x.prioridad)+'</td><td>'+badge(x.estado)+'</td><td>'+E(x.asignado_nombre||'Sin asignar')+'</td><td>'+E(fdate(x.created_at,true))+'</td><td><div class="row-actions">'+action('Ver','alertDetail',x.id)+(isMaint()&&x.estado==='nueva'?action('Tomar','alertTake',x.id,'btn-primary'):'')+'</div></td></tr>');
   return rows.length?table(['Alerta','Ubicación','Prioridad','Estado','Asignado','Reportada',''],rows):empty('Sin alertas','Recepción y mantenimiento pueden reportar incidentes desde el celular.','bell',btn('Crear alerta','newAlert'));
  }
  return empty('Sin registros','Todavía no hay información.','info');
@@ -122,4 +122,3 @@ OS.loadPage=async(page)=>{
 OS.types=types;
 OS.actions.gotoAlertas=()=>OS.navigate('alertas');
 })(window.OS);
-

@@ -1,6 +1,6 @@
 'use strict';
 (function(OS){
- const {S,E,I,api,modal,field,textarea,select,opts,toast,isManager,isMaint,badge,fdate}=OS;
+ const {S,E,I,api,modal,field,textarea,select,opts,toast,isManager,isMaint,badge,fdate,humanText}=OS;
  const grid=(...items)=>'<div class="form-grid">'+items.join('')+'</div>';
  const call=(path,body,method='POST')=>api(path,{method,body:JSON.stringify(body)});
  const e=x=>E(x??'—');
@@ -56,7 +56,7 @@
      detail('Asignado a',a.asignado_nombre||'Pendiente'),detail('Equipo',a.equipo_nombre?(a.equipo_codigo+' · '+a.equipo_nombre):'Sin asociar'),
      detail('Vence',a.vence_at?date(a.vence_at):'Sin plazo'),detail('Fecha',date(a.created_at)),
      ...(a.verificada_at?[detail('Verificó',a.verificado_nombre||'Supervisión'),detail('Resultado de revisión',a.verificacion_nota||'Aprobado')]:[])
-   ].join('')+'</div><div class="overline section-label">DESCRIPCIÓN</div><div class="detail-desc">'+e(a.descripcion)+'</div>'+
+   ].join('')+'</div><div class="overline section-label">DESCRIPCIÓN</div><div class="detail-desc">'+e(humanText(a.descripcion))+'</div>'+
     (gallery?'<div class="overline section-label">FOTOGRAFÍAS</div><div class="incident-gallery">'+gallery+'</div>':'')+
     '<div class="overline section-label">HISTORIAL DE LA INCIDENCIA</div><div class="incident-history">'+notes+'</div>'+actions,null);
  };

@@ -25,6 +25,11 @@ function checklistText(items) {
   return items.length ? `\n\nChecklist informado por el hotel:\n${items.map((x, i) => `${i + 1}. ${x}`).join('\n')}` : '';
 }
 
+function dateKey(value) {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value || '').slice(0, 10);
+}
+
 async function currentPeriods() {
   const result = await pool.query(
     `SELECT
@@ -60,7 +65,7 @@ async function syncRecurringMaintenance() {
         await client.query('ROLLBACK');
         continue;
       }
-      const description = `Rutina ${plan.frecuencia} Böden · período ${period}. Asignar responsable, completar el trabajo y adjuntar evidencia.${checklistText(checklist)}`;
+      const description = `Rutina ${plan.frecuencia} Böden · período ${dateKey(period)}. Asignar responsable, completar el trabajo y adjuntar evidencia.${checklistText(checklist)}`;
       const created = await client.query(
         `INSERT INTO alertas(numero,titulo,descripcion,prioridad,estado,vence_at)
          VALUES(nextval('alerta_numero_seq'),$1,$3,'media','nueva',
@@ -108,4 +113,3 @@ async function listRecurringPlan() {
 }
 
 module.exports = { seedRecurringPlan, syncRecurringMaintenance, listRecurringPlan };
-
