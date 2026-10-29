@@ -20,15 +20,46 @@ router.get('/verificacion-plan',requireRole('jefe_mantenimiento','admin'),run(as
 router.get('/',run(async(req,res)=>{
   const q=[
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE estado='fuera_servicio')::int fuera,COUNT(*) FILTER(WHERE estado='mantenimiento')::int reparacion,COUNT(*) FILTER(WHERE criticidad='alta')::int criticos FROM equipos WHERE estado!='baja'"),
-    pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE activo AND proxima_fecha<CURRENT_DATE)::int vencidos,COUNT(*) FILTER(WHERE activo AND proxima_fecha BETWEEN CURRENT_DATE AND CURRENT_DATE+7)::int semana FROM preventivos WHERE activo=true"),
+    pool.query(`WITH agenda AS (
+      SELECT p.proxima_fecha::date AS fecha
+      FROM preventivos p WHERE p.activo
+      UNION ALL
+      SELECT (a.vence_at AT TIME ZONE 'America/Argentina/Cordoba')::date
+      FROM mantenimiento_anual_ejecuciones e JOIN alertas a ON a.id=e.alerta_id
+      WHERE a.estado NOT IN ('cerrada','cancelada')
+      UNION ALL
+      SELECT (a.vence_at AT TIME ZONE 'America/Argentina/Cordoba')::date
+      FROM mantenimiento_rutina_ejecuciones e JOIN alertas a ON a.id=e.alerta_id
+      WHERE a.estado NOT IN ('cerrada','cancelada')
+    ), hoy AS (SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS fecha)
+    SELECT COUNT(*)::int total,
+      COUNT(*) FILTER(WHERE agenda.fecha<hoy.fecha)::int vencidos,
+      COUNT(*) FILTER(WHERE agenda.fecha BETWEEN hoy.fecha AND hoy.fecha+7)::int semana
+    FROM agenda CROSS JOIN hoy`),
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE cantidad<=minimo)::int bajos FROM repuestos WHERE activo=true"),
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE estado='prestada')::int prestadas,COUNT(*) FILTER(WHERE estado='mantenimiento')::int reparacion FROM herramientas"),
     pool.query("SELECT COUNT(*)::int total,COUNT(*) FILTER(WHERE fecha>=CURRENT_DATE)::int hoy,COUNT(*) FILTER(WHERE fecha>=CURRENT_DATE-7)::int semana FROM trabajos"),
     pool.query("SELECT COUNT(*) FILTER(WHERE estado NOT IN ('cerrada','cancelada'))::int abiertas,COUNT(*) FILTER(WHERE prioridad='urgente' AND estado NOT IN ('cerrada','cancelada'))::int urgentes,COUNT(*) FILTER(WHERE estado='resuelta')::int por_verificar,COUNT(*) FILTER(WHERE vence_at<now() AND estado NOT IN ('cerrada','cancelada'))::int vencidas FROM alertas"),
     pool.query(`SELECT t.id,t.titulo,t.tipo,t.estado,t.fecha,u.nombre AS tecnico,e.nombre AS equipo
       FROM trabajos t JOIN usuarios u ON u.id=t.tecnico_id LEFT JOIN equipos e ON e.id=t.equipo_id ORDER BY t.fecha DESC LIMIT 6`),
-    pool.query(`SELECT p.id,p.titulo,p.proxima_fecha,e.nombre AS equipo,e.codigo
-      FROM preventivos p JOIN equipos e ON e.id=p.equipo_id WHERE p.activo AND p.proxima_fecha<=CURRENT_DATE+14 ORDER BY p.proxima_fecha LIMIT 6`),
+    pool.query(`WITH agenda AS (
+      SELECT p.id,p.titulo,p.proxima_fecha::date AS proxima_fecha,e.nombre AS equipo,e.codigo
+      FROM preventivos p JOIN equipos e ON e.id=p.equipo_id WHERE p.activo
+      UNION ALL
+      SELECT a.id,a.titulo,(a.vence_at AT TIME ZONE 'America/Argentina/Cordoba')::date,'Plan anual' AS equipo,'ANUAL' AS codigo
+      FROM mantenimiento_anual_ejecuciones x JOIN alertas a ON a.id=x.alerta_id
+      WHERE a.estado NOT IN ('cerrada','cancelada')
+      UNION ALL
+      SELECT a.id,a.titulo,(a.vence_at AT TIME ZONE 'America/Argentina/Cordoba')::date,
+        CASE WHEN p.frecuencia='semanal' THEN 'Rutina semanal' ELSE 'Rutina mensual' END AS equipo,
+        UPPER(p.frecuencia) AS codigo
+      FROM mantenimiento_rutina_ejecuciones x
+      JOIN mantenimiento_rutinas p ON p.id=x.plan_id
+      JOIN alertas a ON a.id=x.alerta_id
+      WHERE a.estado NOT IN ('cerrada','cancelada')
+    ), hoy AS (SELECT (now() AT TIME ZONE 'America/Argentina/Cordoba')::date AS fecha)
+    SELECT agenda.* FROM agenda CROSS JOIN hoy
+    WHERE agenda.proxima_fecha<=hoy.fecha+14 ORDER BY agenda.proxima_fecha LIMIT 6`),
     pool.query(`SELECT id,nombre,unidad,cantidad,minimo FROM repuestos WHERE activo AND cantidad<=minimo ORDER BY cantidad ASC LIMIT 6`),
     pool.query(`SELECT DATE(fecha) AS dia,COUNT(*)::int cantidad FROM trabajos
       WHERE fecha>=CURRENT_DATE-6 GROUP BY DATE(fecha) ORDER BY dia`)
